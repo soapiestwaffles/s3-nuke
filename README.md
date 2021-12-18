@@ -1,7 +1,8 @@
-# s3-nuke
-🪣💣 Nuke all the files and their versions from an S3 Bucket 💣🪣
+# 🪣💣 s3-nuke 💣🪣
+Nuke all the files and their versions from an S3 Bucket 
 
-_...because deleting a full bucket is annoying_
+### Why?
+_...because deleting any bucket with files is just plain annoying._
 
 
 ## License
