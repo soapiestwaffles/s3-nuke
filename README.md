@@ -6,6 +6,8 @@ Nuke all the files and their versions from an S3 Bucket
 ### Why?
 _...because deleting any bucket with files is just plain annoying._
 
+While there are several other projects that do the same function, I wanted something
+with a little more interactivity. Also, I was bored :)
 
 ## License
 
