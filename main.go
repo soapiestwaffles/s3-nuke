@@ -16,5 +16,4 @@ func main() {
 
 	var err error
 	ctx.FatalIfErrorf(err)
-
 }
