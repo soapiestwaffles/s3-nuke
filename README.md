@@ -1,5 +1,7 @@
 ![header image](https://github.com/soapiestwaffles/_assets/raw/master/s3-nuke/header.jpg)
 
+> ⚠️ Work In Progress - this project is still in early stages ⚠️
+
 # 🪣💣 s3-nuke 💣🪣
 Nuke all the files and their versions from an S3 Bucket 
 
