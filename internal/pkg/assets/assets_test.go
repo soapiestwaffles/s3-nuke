@@ -2,7 +2,6 @@ package assets
 
 import (
 	"io/ioutil"
-	"strings"
 	"testing"
 )
 
@@ -30,8 +29,4 @@ func TestInit(t *testing.T) {
 			}
 		})
 	}
-}
-
-func countWords(phrase string) int {
-	return len(strings.Fields(strings.TrimSpace(phrase)))
 }
