@@ -1,3 +1,4 @@
+project_name: s3-nuke
 before:
   hooks:
     - go mod tidy
@@ -9,8 +10,8 @@ builds:
       - linux
       - windows
       - darwin
-    ldflags:
-      - -s -w -X main.build={{.Version}}
+    # ldflags:
+    #   - -s -w -X main.build={{.Summary}}
 archives:
   - replacements:
       darwin: Darwin
@@ -26,7 +27,7 @@ archives:
       - LICENSE
       - README.md
 checksum:
-  name_template: 'checksums.txt'
+  name_template: '{{ .ProjectName}}_{{ .Version }}_checksums.txt'
 snapshot:
   name_template: "{{ incpatch .Version }}-next"
 changelog:

@@ -11,7 +11,10 @@ import (
 const releaseURL = "https://github.com/soapiestwaffles/s3-nuke/release"
 
 var (
-	build = "UNKNOWN"
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+	builtBy = "unknown"
 
 	cli struct {
 		Debug   bool `help:"enable debug mode"`
@@ -29,7 +32,9 @@ func main() {
 	if cli.Version {
 		fmt.Println("Find releases at", releaseURL)
 		fmt.Println("")
-		fmt.Println("version", build)
+		fmt.Println("version....:", version)
+		fmt.Println("commit.....:", commit)
+		fmt.Println("data.......:", date)
 		os.Exit(0)
 	}
 
