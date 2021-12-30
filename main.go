@@ -67,6 +67,7 @@ func main() {
 	ctx.FatalIfErrorf(err)
 	spinnerGetBuckets.Start()
 	buckets, err := s3.GetAllBuckets(context.TODO())
+	ctx.FatalIfErrorf(err)
 	spinnerGetBuckets.Stop()
 
 	selectBucketsPrompt(buckets)
