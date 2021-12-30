@@ -68,7 +68,7 @@ func TestNewS3Service(t *testing.T) {
 
 func Test_s3Service_GetAllBuckets(t *testing.T) {
 	t.Run("successful", func(t *testing.T) {
-		s3 := NewS3Service(&S3APIMock{})
+		s3 := NewS3Service(&S3APIMock{options: s3.Options{}})
 
 		result, err := s3.GetAllBuckets(context.Background())
 		if err != nil {
