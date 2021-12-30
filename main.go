@@ -63,7 +63,8 @@ func main() {
 
 	spinnerGetBuckets := spinner.New(spinner.CharSets[13], 100*time.Millisecond)
 	spinnerGetBuckets.Suffix = " fetching bucket list..."
-	spinnerGetBuckets.Color("blue", "bold")
+	err = spinnerGetBuckets.Color("blue", "bold")
+	ctx.FatalIfErrorf(err)
 	spinnerGetBuckets.Start()
 	buckets, err := s3.GetAllBuckets(context.TODO())
 	spinnerGetBuckets.Stop()
