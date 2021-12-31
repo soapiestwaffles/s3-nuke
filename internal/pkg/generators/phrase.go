@@ -6,6 +6,7 @@ import (
 	fakelish "github.com/nwtgck/go-fakelish"
 )
 
+// GeneratePhrase creates a phrase `numWords` long, consisting of non-sense, randomly generated words three (3) to seven (7) letters long
 func GeneratePhrase(numWords int) string {
 	words := make([]string, 0)
 

@@ -51,7 +51,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Initalize AWS S3 Client
+	// Initialize AWS S3 Client
 	cfg, err := newAWSSDKConfig(cli.AWSEndpoint)
 	ctx.FatalIfErrorf(err)
 	s3Client := s3.NewFromConfig(cfg)
