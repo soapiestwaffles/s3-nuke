@@ -1,4 +1,6 @@
-> ⚠️ Work In Progress - this project is still in early stages ⚠️
+[![Lint & Test](https://github.com/soapiestwaffles/s3-nuke/actions/workflows/lint.yml/badge.svg)](https://github.com/soapiestwaffles/s3-nuke/actions/workflows/lint.yml)
+
+⚠️ *Work In Progress - this project is still in early stages* ⚠️
 
 ![header image](https://github.com/soapiestwaffles/_assets/raw/master/s3-nuke/header.jpg)
 
