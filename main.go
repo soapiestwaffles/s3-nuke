@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/kong"
+	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/briandowns/spinner"
@@ -27,13 +28,13 @@ var (
 	// builtBy = "unknown"
 
 	cli struct {
-		Debug   bool `help:"enable debug mode"`
-		Version bool `help:"display version information"`
+		// Debug       bool   `help:"enable debug mode"`
+		Version     bool   `help:"display version information" optional:""`
+		AWSEndpoint string `help:"override AWS endpoint address" short:"e" optional:""`
 	}
 )
 
 func main() {
-
 	ctx := kong.Parse(&cli,
 		kong.Name("s3-nuke"),
 		kong.Description("Quickly destroy all objects and versions in an AWS S3 bucket."))
@@ -51,7 +52,7 @@ func main() {
 	}
 
 	// Initalize AWS S3 Client
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+	cfg, err := newAWSSDKConfig(cli.AWSEndpoint)
 	ctx.FatalIfErrorf(err)
 	s3Client := s3.NewFromConfig(cfg)
 
@@ -123,4 +124,22 @@ func selectBucketsPrompt(buckets []aws.Bucket) {
 		return
 	}
 
+}
+
+func newAWSSDKConfig(awsEndpoint string) (awssdk.Config, error) {
+	var cfg awssdk.Config
+	var err error
+	if cli.AWSEndpoint != "" {
+		customResolver := awssdk.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (awssdk.Endpoint, error) {
+			return awssdk.Endpoint{
+				PartitionID: "aws",
+				URL:         cli.AWSEndpoint,
+			}, nil
+		})
+		cfg, err = config.LoadDefaultConfig(context.TODO(), config.WithEndpointResolverWithOptions(customResolver))
+	} else {
+		cfg, err = config.LoadDefaultConfig(context.TODO())
+	}
+
+	return cfg, err
 }

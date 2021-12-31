@@ -2,10 +2,12 @@ module github.com/soapiestwaffles/s3-nuke
 
 go 1.17
 
-require github.com/alecthomas/kong v0.2.22
+require (
+	github.com/alecthomas/kong v0.2.22
+	github.com/aws/aws-sdk-go-v2 v1.11.2
+)
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.11.2 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.0.0 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.6.5 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.8.2 // indirect
