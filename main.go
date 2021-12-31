@@ -62,6 +62,7 @@ func main() {
 		ctx.FatalIfErrorf(errors.New("error initializing s3 service"))
 	}
 
+	// Get list of buckets
 	spinnerGetBuckets := spinner.New(spinner.CharSets[13], 100*time.Millisecond)
 	spinnerGetBuckets.Suffix = " fetching bucket list..."
 	err = spinnerGetBuckets.Color("blue", "bold")
@@ -71,6 +72,13 @@ func main() {
 	ctx.FatalIfErrorf(err)
 	spinnerGetBuckets.Stop()
 
+	// Exit if there are no buckets to nuke
+	if len(buckets) == 0 {
+		fmt.Println("No buckets found! Exiting.")
+		os.Exit(0)
+	}
+
+	// User select bucket
 	selectBucketsPrompt(buckets)
 
 	ctx.FatalIfErrorf(err)
