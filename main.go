@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -50,9 +49,6 @@ func main() {
 
 	// Set up S3 client
 	s3 := aws.NewS3Service(aws.WithAWSEndpoint(cli.AWSEndpoint))
-	if s3 == nil {
-		ctx.FatalIfErrorf(errors.New("error creating S3 service"))
-	}
 
 	// Get list of buckets
 	spinnerGetBuckets := spinner.New(spinner.CharSets[13], 100*time.Millisecond)
