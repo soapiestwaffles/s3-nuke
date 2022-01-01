@@ -10,9 +10,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/kong"
-	awssdk "github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/briandowns/spinner"
 	"github.com/manifoldco/promptui"
 	"github.com/soapiestwaffles/s3-nuke/internal/pkg/assets"
@@ -51,21 +48,16 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Initialize AWS S3 Client
-	cfg, err := newAWSSDKConfig(cli.AWSEndpoint)
-	ctx.FatalIfErrorf(err)
-	s3Client := s3.NewFromConfig(cfg)
-
-	// Init S3 Service
-	s3 := aws.NewS3Service(s3Client)
+	// Set up S3 client
+	s3 := aws.NewS3Service(aws.WithAWSEndpoint(cli.AWSEndpoint))
 	if s3 == nil {
-		ctx.FatalIfErrorf(errors.New("error initializing s3 service"))
+		ctx.FatalIfErrorf(errors.New("error creating S3 service"))
 	}
 
 	// Get list of buckets
 	spinnerGetBuckets := spinner.New(spinner.CharSets[13], 100*time.Millisecond)
 	spinnerGetBuckets.Suffix = " fetching bucket list..."
-	err = spinnerGetBuckets.Color("blue", "bold")
+	err := spinnerGetBuckets.Color("blue", "bold")
 	ctx.FatalIfErrorf(err)
 	spinnerGetBuckets.Start()
 	buckets, err := s3.GetAllBuckets(context.TODO())
@@ -132,22 +124,4 @@ func selectBucketsPrompt(buckets []aws.Bucket) {
 		return
 	}
 
-}
-
-func newAWSSDKConfig(awsEndpoint string) (awssdk.Config, error) {
-	var cfg awssdk.Config
-	var err error
-	if cli.AWSEndpoint != "" {
-		customResolver := awssdk.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (awssdk.Endpoint, error) {
-			return awssdk.Endpoint{
-				PartitionID: "aws",
-				URL:         cli.AWSEndpoint,
-			}, nil
-		})
-		cfg, err = config.LoadDefaultConfig(context.TODO(), config.WithEndpointResolverWithOptions(customResolver))
-	} else {
-		cfg, err = config.LoadDefaultConfig(context.TODO())
-	}
-
-	return cfg, err
 }

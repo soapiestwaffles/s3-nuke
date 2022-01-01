@@ -47,15 +47,10 @@ func TestNewS3Service(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewS3Service(tt.s3Client)
-			if got == nil && tt.s3Client != nil {
+			got := NewS3Service(WithS3API(tt.s3Client))
+			if got == nil {
 				t.Errorf("NewS3Service() returned nil when it wasn't supposed to")
-			} else if got == nil && tt.s3Client == nil {
-				t.Log("nil case good")
 			} else {
-				if tt.s3Client == nil {
-					t.Errorf("s3Client was nil but got was not")
-				}
 				val := reflect.ValueOf(got).Elem()
 
 				if val.Type().Field(0).Name != "client" {
@@ -68,7 +63,7 @@ func TestNewS3Service(t *testing.T) {
 
 func Test_s3Service_GetAllBuckets(t *testing.T) {
 	t.Run("successful", func(t *testing.T) {
-		s3 := NewS3Service(&S3APIMock{options: s3.Options{}})
+		s3 := NewS3Service(WithS3API(&S3APIMock{options: s3.Options{}}))
 
 		result, err := s3.GetAllBuckets(context.Background())
 		if err != nil {
@@ -86,13 +81,50 @@ func Test_s3Service_GetAllBuckets(t *testing.T) {
 	})
 
 	t.Run("fail", func(t *testing.T) {
-		s3 := NewS3Service(&S3APIMockFail{options: s3.Options{}})
+		s3 := NewS3Service(WithS3API(&S3APIMockFail{options: s3.Options{}}))
 		_, err := s3.GetAllBuckets(context.Background())
 		if err == nil {
 			t.Errorf("expected to get error")
 			return
 		}
 	})
+}
+
+func Test_newConfig(t *testing.T) {
+	tests := []struct {
+		name        string
+		awsEndpoint string
+		wantErr     bool
+	}{
+		{
+			name:        "endpoint not set",
+			awsEndpoint: "",
+			wantErr:     false,
+		},
+		{
+			name:        "endpoint set",
+			awsEndpoint: "http://test-endpoint.com:1234",
+			wantErr:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := newConfig(tt.awsEndpoint)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("newConfig() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.awsEndpoint == "" {
+				if got.EndpointResolverWithOptions != nil {
+					t.Errorf("%s: newConfig() error, EndpointResolverWithOptions was set but was supposed to be nil", tt.name)
+				}
+			} else {
+				if got.EndpointResolverWithOptions == nil {
+					t.Errorf("%s: newConfig() error, EndpointResolveWithOptions was nil but was supposed to be set", tt.name)
+				}
+			}
+		})
+	}
 }
 
 // =================
