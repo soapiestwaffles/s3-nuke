@@ -26,7 +26,7 @@ var (
 	cli struct {
 		// Debug       bool   `help:"enable debug mode"`
 		Version     bool   `help:"display version information" optional:""`
-		AWSEndpoint string `help:"override AWS endpoint address" short:"e" optional:""`
+		AWSEndpoint string `help:"override AWS endpoint address" short:"e" optional:"" env:"AWS_ENDPOINT"`
 	}
 )
 
@@ -47,6 +47,9 @@ func main() {
 		os.Exit(0)
 	}
 
+	if cli.AWSEndpoint != "" {
+		fmt.Println("Using AWS endpoint:", cli.AWSEndpoint)
+	}
 	// Set up S3 client
 	s3 := aws.NewS3Service(aws.WithAWSEndpoint(cli.AWSEndpoint))
 
