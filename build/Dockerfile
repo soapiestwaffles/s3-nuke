@@ -3,11 +3,11 @@ ARG GOLANG_VERSION=1.17.5
 FROM golang:${GOLANG_VERSION}-alpine as builder
 
 WORKDIR /build
-ADD . .
+COPY . .
 
-RUN go get ./...
-RUN CGO_ENABLED=0 go test ./... -v
-RUN CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o s3-nuke .
+RUN go get ./... \
+    && CGO_ENABLED=0 go test ./... -v \
+    && CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o s3-nuke .
 
 # RUNTIME ===========================================================================================
 FROM scratch
