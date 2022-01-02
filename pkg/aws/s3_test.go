@@ -6,18 +6,20 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/aws/aws-sdk-go/aws"
 )
 
 type S3APIMock struct {
 	options s3.Options
+	t       *testing.T
 }
 
 type S3APIMockFail struct {
 	options s3.Options
+	t       *testing.T
 }
 
 func TestNewS3Service(t *testing.T) {
@@ -127,6 +129,111 @@ func Test_newConfig(t *testing.T) {
 	}
 }
 
+func TestWithAWSEndpoint(t *testing.T) {
+	tests := []struct {
+		name        string
+		awsEndpoint string
+		want        S3ServiceOption
+	}{
+		{
+			name:        "with endpoint",
+			awsEndpoint: "http://test.com:1234",
+		},
+		{
+			name:        "with empty endpoint",
+			awsEndpoint: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := &s3Service{}
+			f := WithAWSEndpoint(tt.awsEndpoint)
+			f(svc)
+			if svc.awsEndpoint != tt.awsEndpoint {
+				t.Errorf("WithAWSEndpoint(): set awsEndpoint to %s, but got %s", tt.awsEndpoint, svc.awsEndpoint)
+			}
+		})
+	}
+}
+
+func Test_s3Service_CreateBucketSimple(t *testing.T) {
+	s3Mock := S3APIMock{
+		options: s3.Options{},
+		t:       t,
+	}
+	s3MockFail := S3APIMockFail{
+		options: s3.Options{},
+		t:       t,
+	}
+	type args struct {
+		ctx        context.Context
+		bucketName string
+		versioned  bool
+		region     string
+	}
+	tests := []struct {
+		name    string
+		client  S3API
+		args    args
+		wantErr bool
+	}{
+		{
+			name:   "create new bucket not versioned",
+			client: s3Mock,
+			args: args{
+				ctx:        context.TODO(),
+				bucketName: "testbucket",
+				versioned:  false,
+				region:     "us-west-2",
+			},
+			wantErr: false,
+		},
+		{
+			name:   "fail create new bucket not versioned",
+			client: s3MockFail,
+			args: args{
+				ctx:        context.TODO(),
+				bucketName: "testbucket",
+				versioned:  false,
+				region:     "us-west-2",
+			},
+			wantErr: true,
+		},
+		{
+			name:   "create new bucket versioned",
+			client: s3Mock,
+			args: args{
+				ctx:        context.TODO(),
+				bucketName: "testbucket",
+				versioned:  true,
+				region:     "us-west-2",
+			},
+			wantErr: false,
+		},
+		{
+			name:   "fail create new bucket versioned",
+			client: s3MockFail,
+			args: args{
+				ctx:        context.TODO(),
+				bucketName: "testbucket",
+				versioned:  true,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			s := NewS3Service(
+				WithS3API(tt.client))
+
+			if err := s.CreateBucketSimple(tt.args.ctx, tt.args.bucketName, tt.args.region, tt.args.versioned); (err != nil) != tt.wantErr {
+				t.Errorf("s3Service.CreateBucketSimple() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 // =================
 
 func (s S3APIMock) ListBuckets(ctx context.Context,
@@ -149,5 +256,35 @@ func (s S3APIMockFail) ListBuckets(ctx context.Context,
 	params *s3.ListBucketsInput,
 	optFns ...func(*s3.Options)) (*s3.ListBucketsOutput, error) {
 
+	return nil, errors.New("simulated error case")
+}
+
+func (s S3APIMock) CreateBucket(ctx context.Context,
+	params *s3.CreateBucketInput,
+	optFns ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
+	s.t.Logf("created bucket: [%s]", *params.Bucket)
+	return &s3.CreateBucketOutput{
+		Location: params.Bucket,
+	}, nil
+}
+
+func (s S3APIMockFail) CreateBucket(ctx context.Context,
+	params *s3.CreateBucketInput,
+	optFns ...func(*s3.Options)) (*s3.CreateBucketOutput, error) {
+	s.t.Logf("created bucket: [%s], with failure", *params.Bucket)
+	return nil, errors.New("simulated error case")
+}
+
+func (s S3APIMock) PutBucketVersioning(ctx context.Context,
+	params *s3.PutBucketVersioningInput,
+	optFns ...func(*s3.Options)) (*s3.PutBucketVersioningOutput, error) {
+	s.t.Logf("version bucket: [%s], status: [%s]", *params.Bucket, params.VersioningConfiguration.Status)
+	return &s3.PutBucketVersioningOutput{}, nil
+}
+
+func (s S3APIMockFail) PutBucketVersioning(ctx context.Context,
+	params *s3.PutBucketVersioningInput,
+	optFns ...func(*s3.Options)) (*s3.PutBucketVersioningOutput, error) {
+	s.t.Logf("version bucket: [%s], status: [%s], with failure", *params.Bucket, params.VersioningConfiguration.Status)
 	return nil, errors.New("simulated error case")
 }

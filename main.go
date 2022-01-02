@@ -103,8 +103,8 @@ func selectBucketsPrompt(buckets []aws.Bucket) {
 
 	searcher := func(input string, index int) bool {
 		bucket := derefBucket[index]
-		name := strings.Replace(strings.ToLower(bucket.Name), " ", "", -1)
-		input = strings.Replace(strings.ToLower(input), " ", "", -1)
+		name := strings.ReplaceAll(strings.ToLower(bucket.Name), " ", "")
+		input = strings.ReplaceAll(strings.ToLower(input), " ", "")
 
 		return strings.Contains(name, input)
 	}

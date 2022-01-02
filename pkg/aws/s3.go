@@ -7,13 +7,18 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 // S3Service defines functions related to S3 operations
 type S3Service interface {
-
 	// ListBuckets loads buckets into memory
 	GetAllBuckets(ctx context.Context) ([]Bucket, error)
+
+	// CreateBucketSimple creates a new, simple S3 bucket in the current/default region
+	//
+	// (This function is mainly used in s3-nuke for testing)
+	CreateBucketSimple(ctx context.Context, bucketName string, region string, versioned bool) error
 }
 
 // Bucket contains information about an S3 bucket
@@ -27,6 +32,14 @@ type S3API interface {
 	ListBuckets(ctx context.Context,
 		params *s3.ListBucketsInput,
 		optFns ...func(*s3.Options)) (*s3.ListBucketsOutput, error)
+
+	CreateBucket(ctx context.Context,
+		params *s3.CreateBucketInput,
+		optFns ...func(*s3.Options)) (*s3.CreateBucketOutput, error)
+
+	PutBucketVersioning(ctx context.Context,
+		params *s3.PutBucketVersioningInput,
+		optFns ...func(*s3.Options)) (*s3.PutBucketVersioningOutput, error)
 }
 
 type S3ServiceOption func(s *s3Service)
@@ -83,6 +96,33 @@ func (s *s3Service) GetAllBuckets(ctx context.Context) ([]Bucket, error) {
 	}
 
 	return buckets, nil
+}
+
+func (s *s3Service) CreateBucketSimple(ctx context.Context, bucketName string, region string, versioned bool) error {
+	_, err := s.client.CreateBucket(ctx, &s3.CreateBucketInput{
+		Bucket: &bucketName,
+		ACL:    types.BucketCannedACLPrivate,
+		CreateBucketConfiguration: &types.CreateBucketConfiguration{
+			LocationConstraint: types.BucketLocationConstraint(region),
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	if versioned {
+		_, err := s.client.PutBucketVersioning(ctx, &s3.PutBucketVersioningInput{
+			Bucket: &bucketName,
+			VersioningConfiguration: &types.VersioningConfiguration{
+				Status: "Enabled",
+			},
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func newS3Client(awsEndpoint string) *s3.Client {
