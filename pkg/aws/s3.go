@@ -111,8 +111,6 @@ func (s *s3Service) CreateBucketSimple(ctx context.Context, bucketName string, r
 		CreateBucketConfiguration: &types.CreateBucketConfiguration{
 			LocationConstraint: types.BucketLocationConstraint(region),
 		},
-	}, func(o *s3.Options) {
-		o.UsePathStyle = true
 	})
 	if err != nil {
 		return err
