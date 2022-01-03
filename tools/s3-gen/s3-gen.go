@@ -99,7 +99,7 @@ func main() {
 			key := uuid.NewString()
 			_, _, err := s3.PutObjectSimple(context.TODO(), bucketName, key, r)
 			if err != nil {
-				fmt.Printf("an error occured while putting object: %s", err.Error())
+				fmt.Printf("an error occured while putting object: %s\n", err.Error())
 				fmt.Printf("bucket name: %s, key name: %s\n", bucketName, key)
 				os.Exit(1)
 			}
@@ -115,7 +115,7 @@ func main() {
 					r = strings.NewReader(generators.GeneratePhrase(20))
 					_, _, err := s3.PutObjectSimple(context.TODO(), bucketName, key, r)
 					if err != nil {
-						fmt.Printf("an error occured while putting new object version: %s", err.Error())
+						fmt.Printf("an error occured while putting new object version: %s\n", err.Error())
 						fmt.Printf("bucket name: %s, key name: %s\n", bucketName, key)
 						os.Exit(1)
 					}
