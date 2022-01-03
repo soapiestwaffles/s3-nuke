@@ -3,13 +3,16 @@ package aws
 import (
 	"context"
 	"errors"
+	"io"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go/middleware"
 )
 
 type S3APIMock struct {
@@ -234,6 +237,68 @@ func Test_s3Service_CreateBucketSimple(t *testing.T) {
 	}
 }
 
+func Test_s3Service_PutObjectSimple(t *testing.T) {
+	s3Mock := S3APIMock{
+		options: s3.Options{},
+		t:       t,
+	}
+	s3MockFail := S3APIMockFail{
+		options: s3.Options{},
+		t:       t,
+	}
+
+	reader1 := strings.NewReader("🧪 This is a test body 1")
+	reader2 := strings.NewReader("🧪 This is a test body 2")
+	type args struct {
+		ctx        context.Context
+		bucketName string
+		keyName    string
+		body       io.Reader
+	}
+	tests := []struct {
+		name    string
+		client  S3API
+		args    args
+		wantErr bool
+	}{
+		{
+			name:   "put file no error",
+			client: s3Mock,
+			args: args{
+				ctx:        context.TODO(),
+				bucketName: "testbucket",
+				keyName:    "testkey",
+				body:       reader1,
+			},
+			wantErr: false,
+		},
+		{
+			name:   "put file error",
+			client: s3MockFail,
+			args: args{
+				ctx:        context.TODO(),
+				bucketName: "testbucket",
+				keyName:    "testkey",
+				body:       reader2,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			s := NewS3Service(
+				WithS3API(tt.client))
+
+			_, _, err := s.PutObjectSimple(tt.args.ctx, tt.args.bucketName, tt.args.keyName, tt.args.body)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("s3Service.PutObjectSimple() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
 // =================
 
 func (s S3APIMock) ListBuckets(ctx context.Context,
@@ -286,5 +351,54 @@ func (s S3APIMockFail) PutBucketVersioning(ctx context.Context,
 	params *s3.PutBucketVersioningInput,
 	optFns ...func(*s3.Options)) (*s3.PutBucketVersioningOutput, error) {
 	s.t.Logf("version bucket: [%s], status: [%s], with failure", *params.Bucket, params.VersioningConfiguration.Status)
+	return nil, errors.New("simulated error case")
+}
+
+func (s S3APIMock) PutObject(ctx context.Context,
+	params *s3.PutObjectInput,
+	optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
+	s.t.Logf("put object: [%s], bucket: [%s]", *params.Key, *params.Bucket)
+
+	buf := make([]byte, 1024)
+	for {
+		n, err := params.Body.Read(buf)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		if n > 0 {
+			s.t.Logf("read from body (1024bytes):\n%s", string(buf[:n]))
+		}
+	}
+
+	return &s3.PutObjectOutput{
+		BucketKeyEnabled: false,
+		ETag:             aws.String("123456789ABCDEF"),
+		VersionId:        aws.String("123456789ABCDEF"),
+		ResultMetadata:   middleware.Metadata{},
+	}, nil
+}
+
+func (s S3APIMockFail) PutObject(ctx context.Context,
+	params *s3.PutObjectInput,
+	optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
+	s.t.Logf("put object: [%s], bucket: [%s], with failure", *params.Key, *params.Bucket)
+
+	buf := make([]byte, 1024)
+	for {
+		n, err := params.Body.Read(buf)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		if n > 0 {
+			s.t.Logf("read from body (1024bytes):\n%s", string(buf[:n]))
+		}
+	}
+
 	return nil, errors.New("simulated error case")
 }

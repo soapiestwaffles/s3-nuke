@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -19,12 +20,12 @@ type S3Service interface {
 	//
 	// (This function is mainly used in s3-nuke for testing)
 	CreateBucketSimple(ctx context.Context, bucketName string, region string, versioned bool) error
-}
 
-// Bucket contains information about an S3 bucket
-type Bucket struct {
-	CreationDate *time.Time
-	Name         *string
+	// PutBucketObject puts an object in an S3 bucket
+	//
+	// returns Etag, VersionID, and Error
+	// (This function is mainly used in s3-nuke for testing)
+	PutObjectSimple(ctx context.Context, bucketName string, keyName string, body io.Reader) (*string, *string, error)
 }
 
 // S3API defines the interface for AWS S3 SDK functions
@@ -40,6 +41,16 @@ type S3API interface {
 	PutBucketVersioning(ctx context.Context,
 		params *s3.PutBucketVersioningInput,
 		optFns ...func(*s3.Options)) (*s3.PutBucketVersioningOutput, error)
+
+	PutObject(ctx context.Context,
+		params *s3.PutObjectInput,
+		optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
+}
+
+// Bucket contains information about an S3 bucket
+type Bucket struct {
+	CreationDate *time.Time
+	Name         *string
 }
 
 type S3ServiceOption func(s *s3Service)
@@ -123,6 +134,20 @@ func (s *s3Service) CreateBucketSimple(ctx context.Context, bucketName string, r
 	}
 
 	return nil
+}
+
+func (s *s3Service) PutObjectSimple(ctx context.Context, bucketName string, keyName string, body io.Reader) (*string, *string, error) {
+	result, err := s.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket: &bucketName,
+		Key:    &keyName,
+		Body:   body,
+	})
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return result.ETag, result.VersionId, nil
 }
 
 func newS3Client(awsEndpoint string) *s3.Client {

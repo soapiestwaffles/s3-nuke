@@ -37,12 +37,7 @@ endif
 ## Lint:
 lint-go: ## run golangci-lint on project
 	@$(eval OUTPUT_OPTIONS = $(shell [ "${EXPORT_RESULT}" == "true" ] && echo "--out-format checkstyle ./... | tee /dev/tty > checkstyle-report.xml" || echo "" ))
-	docker run --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:latest-alpine golangci-lint run --deadline=300s $(OUTPUT_OPTIONS)
-
-	@echo "====="
-
-	@GO111MODULE=off go get -u github.com/go-critic/go-critic/cmd/gocritic
-	@gocritic check --enableAll ./...
+	docker run --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:latest-alpine golangci-lint run --deadline=500s $(OUTPUT_OPTIONS)
 
 # lint-yaml: ## lint yaml files in project
 # ifeq ($(EXPORT_RESULT), true)
@@ -62,7 +57,7 @@ endif
 ## Clean:
 test-clean: ## Clean up after tests
 	@echo cleaning up...
-	@rm coverage.html coverage.out coverage.xml
+	@rm coverage.html coverage.out coverage.xml || true
 
 ## Help:
 help: ## Show this help.
