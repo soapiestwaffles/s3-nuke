@@ -53,6 +53,7 @@ type Bucket struct {
 	Name         *string
 }
 
+// S3ServiceOption is used with NewS3Service and configures the newly created s3Service
 type S3ServiceOption func(s *s3Service)
 
 type s3Service struct {
@@ -74,7 +75,7 @@ func NewS3Service(opts ...S3ServiceOption) S3Service {
 	return svc
 }
 
-// WithS3API should be used if you want to initalize your own S3 client (such as in cases of a mock S3 client for testing)
+// WithS3API should be used if you want to initialize your own S3 client (such as in cases of a mock S3 client for testing)
 // This cannot be used with WithAWSEndpoint
 func WithS3API(s3Client S3API) S3ServiceOption {
 	return func(s *s3Service) {

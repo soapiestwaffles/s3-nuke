@@ -83,7 +83,7 @@ func main() {
 			err = s3.CreateBucketSimple(context.TODO(), bucketName, cli.Region, false)
 		}
 		if err != nil {
-			fmt.Printf("an error occured while creating a new bucket: %s\n", err.Error())
+			fmt.Printf("an error occurred while creating a new bucket: %s\n", err.Error())
 			fmt.Printf("bucket name: %s\n", bucketName)
 			os.Exit(1)
 		}
@@ -92,14 +92,14 @@ func main() {
 		// Create Objects
 		err = objectsBar.Set(0)
 		if err != nil {
-			fmt.Printf("UI error occured: %s", err.Error())
+			fmt.Printf("UI error occurred: %s", err.Error())
 		}
 		for io := 0; io < cli.NumObjects; io++ {
 			r := strings.NewReader(generators.GeneratePhrase(20))
 			key := uuid.NewString()
 			_, _, err := s3.PutObjectSimple(context.TODO(), bucketName, key, r)
 			if err != nil {
-				fmt.Printf("an error occured while putting object: %s\n", err.Error())
+				fmt.Printf("an error occurred while putting object: %s\n", err.Error())
 				fmt.Printf("bucket name: %s, key name: %s\n", bucketName, key)
 				os.Exit(1)
 			}
@@ -109,13 +109,13 @@ func main() {
 			if cli.NumVersions > 1 {
 				err = versionsBar.Set(1)
 				if err != nil {
-					fmt.Printf("UI error occured: %s", err.Error())
+					fmt.Printf("UI error occurred: %s", err.Error())
 				}
 				for iv := 1; iv < cli.NumObjects; iv++ {
 					r = strings.NewReader(generators.GeneratePhrase(20))
 					_, _, err := s3.PutObjectSimple(context.TODO(), bucketName, key, r)
 					if err != nil {
-						fmt.Printf("an error occured while putting new object version: %s\n", err.Error())
+						fmt.Printf("an error occurred while putting new object version: %s\n", err.Error())
 						fmt.Printf("bucket name: %s, key name: %s\n", bucketName, key)
 						os.Exit(1)
 					}
