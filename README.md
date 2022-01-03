@@ -13,6 +13,33 @@ _...because deleting any bucket with files is just plain annoying._
 While there are several other projects that do the same function, I wanted something
 with a little more interactivity. Also, I was bored 😊
 
+## Misc Tools
+
+### s3-gen
+
+This tool was created for test s3-nuke. This tool will generate `num-buckets` number of buckets, each containing `num-objects` number of objects (containing random data), with `num-versions` number of versions. If `num-versions` < 2, s3-gen will create the buckets with versioning disabled.
+
+#### Running s3-gen
+
+```console
+$ go run tools/s3-gen/s3-gen.go --num-buckets=INT --num-objects=INT --num-versions=INT
+```
+
+#### Usage/Available flags
+```
+s3-nuke tool: generate a set of randomized buckets each containing a set of randomized objects and versions
+
+Flags:
+  -h, --help                     Show context-sensitive help.
+  -e, --aws-endpoint=STRING      override AWS endpoint address ($AWS_ENDPOINT)
+  -n, --num-buckets=INT          number of buckets with randomized names to create
+  -o, --num-objects=INT          number of random objects generated and put into buckets
+  -v, --num-versions=INT         number of versions to create for each random object
+  -r, --region="us-west-2"       specify region to create bucket and objects in
+  -p, --bucket-prefix="s3gen"    prefix for every bucket name generated
+      --yes                      bypass user prompt and proceed with action automatically
+```
+
 ## License
 
 MIT License
