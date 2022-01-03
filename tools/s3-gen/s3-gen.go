@@ -20,7 +20,7 @@ var (
 		NumBuckets   int    `help:"number of buckets with randomized names to create" short:"n" required:""`
 		NumObjects   int    `help:"number of random objects generated and put into buckets" short:"o" required:""`
 		NumVersions  int    `help:"number of versions to create for each random object" short:"v" required:""`
-		Region       string `help:"specify region to create bucket and objects in" short:"r" default:"us-west-2"`
+		Region       string `help:"specify region to create bucket and objects in" short:"r" default:"us-west-2" env:"AWS_REGION"`
 		BucketPrefix string `help:"prefix for every bucket name generated" short:"p" default:"s3gen" optional:""`
 		YesFlag      bool   `name:"yes" help:"bypass user prompt and proceed with action automatically" optional:""`
 	}
@@ -54,7 +54,7 @@ func main() {
 	fmt.Println("")
 
 	// Set up S3 client
-	s3 := aws.NewS3Service(aws.WithAWSEndpoint(cli.AWSEndpoint))
+	s3 := aws.NewS3Service(aws.WithRegion(cli.Region), aws.WithAWSEndpoint(cli.AWSEndpoint))
 
 	// Init progress bar
 	uiprogress.Start()

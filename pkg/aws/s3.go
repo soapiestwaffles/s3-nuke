@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"io"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -28,25 +29,6 @@ type S3Service interface {
 	PutObjectSimple(ctx context.Context, bucketName string, keyName string, body io.Reader) (*string, *string, error)
 }
 
-// S3API defines the interface for AWS S3 SDK functions
-type S3API interface {
-	ListBuckets(ctx context.Context,
-		params *s3.ListBucketsInput,
-		optFns ...func(*s3.Options)) (*s3.ListBucketsOutput, error)
-
-	CreateBucket(ctx context.Context,
-		params *s3.CreateBucketInput,
-		optFns ...func(*s3.Options)) (*s3.CreateBucketOutput, error)
-
-	PutBucketVersioning(ctx context.Context,
-		params *s3.PutBucketVersioningInput,
-		optFns ...func(*s3.Options)) (*s3.PutBucketVersioningOutput, error)
-
-	PutObject(ctx context.Context,
-		params *s3.PutObjectInput,
-		optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
-}
-
 // Bucket contains information about an S3 bucket
 type Bucket struct {
 	CreationDate *time.Time
@@ -59,6 +41,7 @@ type S3ServiceOption func(s *s3Service)
 type s3Service struct {
 	client      S3API
 	awsEndpoint string
+	region      string
 }
 
 // NewS3Service returns an initialized S3Service
@@ -69,7 +52,11 @@ func NewS3Service(opts ...S3ServiceOption) S3Service {
 	}
 
 	if svc.client == nil {
-		svc.client = newS3Client(svc.awsEndpoint)
+		if svc.region == "" {
+			svc.client = newS3Client(os.Getenv("AWS_REGION"), svc.awsEndpoint)
+		} else {
+			svc.client = newS3Client(svc.region, svc.awsEndpoint)
+		}
 	}
 
 	return svc
@@ -88,6 +75,13 @@ func WithS3API(s3Client S3API) S3ServiceOption {
 func WithAWSEndpoint(awsEndpoint string) S3ServiceOption {
 	return func(s *s3Service) {
 		s.awsEndpoint = awsEndpoint
+	}
+}
+
+// WithRegion sets the AWS client region
+func WithRegion(region string) S3ServiceOption {
+	return func(s *s3Service) {
+		s.region = region
 	}
 }
 
@@ -117,6 +111,8 @@ func (s *s3Service) CreateBucketSimple(ctx context.Context, bucketName string, r
 		CreateBucketConfiguration: &types.CreateBucketConfiguration{
 			LocationConstraint: types.BucketLocationConstraint(region),
 		},
+	}, func(o *s3.Options) {
+		o.UsePathStyle = true
 	})
 	if err != nil {
 		return err
@@ -151,9 +147,9 @@ func (s *s3Service) PutObjectSimple(ctx context.Context, bucketName string, keyN
 	return result.ETag, result.VersionId, nil
 }
 
-func newS3Client(awsEndpoint string) *s3.Client {
+func newS3Client(region string, awsEndpoint string) *s3.Client {
 	// Initialize AWS S3 Client
-	cfg, err := newConfig(awsEndpoint)
+	cfg, err := newConfig(region, awsEndpoint)
 	if err != nil {
 		return nil
 	}
@@ -161,20 +157,42 @@ func newS3Client(awsEndpoint string) *s3.Client {
 	return s3.NewFromConfig(cfg)
 }
 
-func newConfig(awsEndpoint string) (aws.Config, error) {
+func newConfig(region string, awsEndpoint string) (aws.Config, error) {
 	var cfg aws.Config
 	var err error
 	if awsEndpoint != "" {
 		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
 			return aws.Endpoint{
-				PartitionID: "aws",
-				URL:         awsEndpoint,
+				PartitionID:   "aws",
+				URL:           awsEndpoint,
+				SigningRegion: region,
 			}, nil
 		})
-		cfg, err = config.LoadDefaultConfig(context.TODO(), config.WithEndpointResolverWithOptions(customResolver))
+		cfg, err = config.LoadDefaultConfig(context.TODO(), config.WithRegion(region), config.WithEndpointResolverWithOptions(customResolver))
 	} else {
-		cfg, err = config.LoadDefaultConfig(context.TODO())
+		cfg, err = config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
 	}
 
 	return cfg, err
+}
+
+// =====
+
+// S3API defines the interface for AWS S3 SDK functions
+type S3API interface {
+	ListBuckets(ctx context.Context,
+		params *s3.ListBucketsInput,
+		optFns ...func(*s3.Options)) (*s3.ListBucketsOutput, error)
+
+	CreateBucket(ctx context.Context,
+		params *s3.CreateBucketInput,
+		optFns ...func(*s3.Options)) (*s3.CreateBucketOutput, error)
+
+	PutBucketVersioning(ctx context.Context,
+		params *s3.PutBucketVersioningInput,
+		optFns ...func(*s3.Options)) (*s3.PutBucketVersioningOutput, error)
+
+	PutObject(ctx context.Context,
+		params *s3.PutObjectInput,
+		optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
 }

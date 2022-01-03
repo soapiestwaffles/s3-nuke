@@ -27,6 +27,7 @@ var (
 		// Debug       bool   `help:"enable debug mode"`
 		Version     bool   `help:"display version information" optional:""`
 		AWSEndpoint string `help:"override AWS endpoint address" short:"e" optional:"" env:"AWS_ENDPOINT"`
+		Region      string `help:"override AWS region" optional:"" env:"AWS_REGION"`
 	}
 )
 
@@ -51,7 +52,12 @@ func main() {
 		fmt.Println("Using AWS endpoint:", cli.AWSEndpoint)
 	}
 	// Set up S3 client
-	s3 := aws.NewS3Service(aws.WithAWSEndpoint(cli.AWSEndpoint))
+	var s3 aws.S3Service
+	if cli.Region == "" {
+		s3 = aws.NewS3Service(aws.WithAWSEndpoint(cli.AWSEndpoint), aws.WithRegion(cli.Region))
+	} else {
+		s3 = aws.NewS3Service(aws.WithAWSEndpoint(cli.AWSEndpoint))
+	}
 
 	// Get list of buckets
 	spinnerGetBuckets := spinner.New(spinner.CharSets[13], 100*time.Millisecond)

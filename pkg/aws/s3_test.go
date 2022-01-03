@@ -114,7 +114,7 @@ func Test_newConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := newConfig(tt.awsEndpoint)
+			got, err := newConfig("us-west-2", tt.awsEndpoint)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("newConfig() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -136,7 +136,6 @@ func TestWithAWSEndpoint(t *testing.T) {
 	tests := []struct {
 		name        string
 		awsEndpoint string
-		want        S3ServiceOption
 	}{
 		{
 			name:        "with endpoint",
@@ -154,6 +153,28 @@ func TestWithAWSEndpoint(t *testing.T) {
 			f(svc)
 			if svc.awsEndpoint != tt.awsEndpoint {
 				t.Errorf("WithAWSEndpoint(): set awsEndpoint to %s, but got %s", tt.awsEndpoint, svc.awsEndpoint)
+			}
+		})
+	}
+}
+
+func TestWithRegion(t *testing.T) {
+	tests := []struct {
+		name   string
+		region string
+	}{
+		{
+			name:   "us-west-2",
+			region: "us-west-2",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := &s3Service{}
+			f := WithRegion(tt.region)
+			f(svc)
+			if svc.region != tt.region {
+				t.Errorf("WithRegion(): set region to %s, but got %s", tt.region, svc.region)
 			}
 		})
 	}
