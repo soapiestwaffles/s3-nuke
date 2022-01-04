@@ -12,6 +12,7 @@ import (
 	"github.com/briandowns/spinner"
 	"github.com/manifoldco/promptui"
 	"github.com/soapiestwaffles/s3-nuke/internal/pkg/assets"
+	"github.com/soapiestwaffles/s3-nuke/internal/pkg/generators"
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws"
 )
 
@@ -76,13 +77,28 @@ func main() {
 	}
 
 	// User select bucket
-	selectBucketsPrompt(buckets)
+	fmt.Println("")
+	selectedBucket, err := selectBucketsPrompt(buckets)
+	if err != nil {
+		fmt.Println("Error selecting bucket! Exiting.")
+		os.Exit(1)
+	}
+	fmt.Println("")
 
-	ctx.FatalIfErrorf(err)
+	fmt.Println("⚠️   !!! WARNING !!!  ⚠️")
+	fmt.Println("This will destroy all versions of all objects in the selected bucket")
+	fmt.Println("")
+	if !typeMatchingPhrase() {
+		fmt.Println("")
+		fmt.Println("Phrase did not match. Exiting!")
+		os.Exit(1)
+	}
 
+	_ = selectedBucket
 }
 
-func selectBucketsPrompt(buckets []aws.Bucket) {
+// selectBucketsPrompt will create the UI select element for the user to select a bucket from a list
+func selectBucketsPrompt(buckets []aws.Bucket) (string, error) {
 	// This is a nasty hack just to dereference the `Name` field.
 	// TODO investigate more to see if we can dereference right in the template OR find a different UI library
 	derefBucket := []struct {
@@ -116,17 +132,37 @@ func selectBucketsPrompt(buckets []aws.Bucket) {
 	}
 
 	prompt := promptui.Select{
-		Label:     "Buckets to Nuke",
+		Label:     "Select a bucket to nuke:",
 		Items:     derefBucket,
 		Templates: templates,
 		Size:      5,
 		Searcher:  searcher,
 	}
 
-	_, _, err := prompt.Run()
-
+	i, _, err := prompt.Run()
 	if err != nil {
-		return
+		return "", nil
 	}
 
+	return *buckets[i].Name, nil
+}
+
+func typeMatchingPhrase() bool {
+	phrase := generators.GeneratePhrase(4)
+
+	fmt.Println("Please enter the following phrase to continue:", phrase)
+	prompt := promptui.Prompt{
+		Label: "Enter phrase",
+	}
+
+	result, err := prompt.Run()
+	if err != nil {
+		return false
+	}
+
+	if strings.ToLower(result) != phrase {
+		return false
+	}
+
+	return true
 }
