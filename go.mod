@@ -4,8 +4,9 @@ go 1.17
 
 require (
 	github.com/alecthomas/kong v0.2.22
-	github.com/aws/aws-sdk-go-v2 v1.11.2
-	github.com/aws/smithy-go v1.9.0
+	github.com/aws/aws-sdk-go-v2 v1.12.0
+	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.14.0
+	github.com/aws/smithy-go v1.9.1
 	github.com/google/uuid v1.3.0
 	github.com/gosuri/uiprogress v0.0.1
 )
@@ -14,8 +15,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.0.0 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.6.5 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.8.2 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.2 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.0.2 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.3 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.1.0 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.5.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.5.2 // indirect
@@ -25,6 +26,7 @@ require (
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/gosuri/uilive v0.0.4 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/ugorji/go/codec v1.1.7 // indirect
