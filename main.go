@@ -53,11 +53,11 @@ func main() {
 		fmt.Println("Using AWS endpoint:", cli.AWSEndpoint)
 	}
 	// Set up S3 client
-	var s3 s3.S3Service
+	var s3svc s3.Service
 	if cli.Region == "" {
-		s3 = s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint), s3.WithRegion(cli.Region))
+		s3svc = s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint), s3.WithRegion(cli.Region))
 	} else {
-		s3 = s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint))
+		s3svc = s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint))
 	}
 
 	// Get list of buckets
@@ -66,7 +66,7 @@ func main() {
 	err := spinnerGetBuckets.Color("blue", "bold")
 	ctx.FatalIfErrorf(err)
 	spinnerGetBuckets.Start()
-	buckets, err := s3.GetAllBuckets(context.TODO())
+	buckets, err := s3svc.GetAllBuckets(context.TODO())
 	ctx.FatalIfErrorf(err)
 	spinnerGetBuckets.Stop()
 
@@ -98,7 +98,7 @@ func main() {
 }
 
 // selectBucketsPrompt will create the UI select element for the user to select a bucket from a list
-func selectBucketsPrompt(buckets []aws.Bucket) (string, error) {
+func selectBucketsPrompt(buckets []s3.Bucket) (string, error) {
 	// This is a nasty hack just to dereference the `Name` field.
 	// TODO investigate more to see if we can dereference right in the template OR find a different UI library
 	derefBucket := []struct {

@@ -111,7 +111,7 @@ func TestWithAWSEndpoint(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := &s3Service{}
+			svc := &service{}
 			f := WithAWSEndpoint(tt.awsEndpoint)
 			f(svc)
 			if svc.awsEndpoint != tt.awsEndpoint {
@@ -133,7 +133,7 @@ func TestWithRegion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			svc := &s3Service{}
+			svc := &service{}
 			f := WithRegion(tt.region)
 			f(svc)
 			if svc.region != tt.region {
