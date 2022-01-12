@@ -1,4 +1,4 @@
-package aws
+package s3
 
 import (
 	"context"
@@ -6,10 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/soapiestwaffles/s3-nuke/pkg/aws/config"
 )
 
 // S3Service defines functions related to S3 operations
@@ -44,8 +43,8 @@ type s3Service struct {
 	region      string
 }
 
-// NewS3Service returns an initialized S3Service
-func NewS3Service(opts ...S3ServiceOption) S3Service {
+// NewService returns an initialized S3Service
+func NewService(opts ...S3ServiceOption) S3Service {
 	svc := &s3Service{}
 	for _, opt := range opts {
 		opt(svc)
@@ -147,31 +146,12 @@ func (s *s3Service) PutObjectSimple(ctx context.Context, bucketName string, keyN
 
 func newS3Client(region string, awsEndpoint string) *s3.Client {
 	// Initialize AWS S3 Client
-	cfg, err := newConfig(region, awsEndpoint)
+	cfg, err := config.New(region, awsEndpoint)
 	if err != nil {
 		return nil
 	}
 
 	return s3.NewFromConfig(cfg)
-}
-
-func newConfig(region string, awsEndpoint string) (aws.Config, error) {
-	var cfg aws.Config
-	var err error
-	if awsEndpoint != "" {
-		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-			return aws.Endpoint{
-				PartitionID:   "aws",
-				URL:           awsEndpoint,
-				SigningRegion: region,
-			}, nil
-		})
-		cfg, err = config.LoadDefaultConfig(context.TODO(), config.WithRegion(region), config.WithEndpointResolverWithOptions(customResolver))
-	} else {
-		cfg, err = config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
-	}
-
-	return cfg, err
 }
 
 // =====
