@@ -11,8 +11,8 @@ import (
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/config"
 )
 
-// S3Service defines functions related to S3 operations
-type S3Service interface {
+// Service defines functions related to S3 operations
+type Service interface {
 	// ListBuckets loads buckets into memory
 	GetAllBuckets(ctx context.Context) ([]Bucket, error)
 
@@ -34,18 +34,18 @@ type Bucket struct {
 	Name         *string
 }
 
-// S3ServiceOption is used with NewS3Service and configures the newly created s3Service
-type S3ServiceOption func(s *s3Service)
+// ServiceOption is used with NewS3Service and configures the newly created s3Service
+type ServiceOption func(s *service)
 
-type s3Service struct {
+type service struct {
 	client      S3API
 	awsEndpoint string
 	region      string
 }
 
 // NewService returns an initialized S3Service
-func NewService(opts ...S3ServiceOption) S3Service {
-	svc := &s3Service{}
+func NewService(opts ...ServiceOption) Service {
+	svc := &service{}
 	for _, opt := range opts {
 		opt(svc)
 	}
@@ -63,28 +63,28 @@ func NewService(opts ...S3ServiceOption) S3Service {
 
 // WithS3API should be used if you want to initialize your own S3 client (such as in cases of a mock S3 client for testing)
 // This cannot be used with WithAWSEndpoint
-func WithS3API(s3Client S3API) S3ServiceOption {
-	return func(s *s3Service) {
+func WithS3API(s3Client S3API) ServiceOption {
+	return func(s *service) {
 		s.client = s3Client
 	}
 }
 
 // WithAWSEndpoint sets endpoint to be used by the AWS client
 // This cannot be used with WithS3API
-func WithAWSEndpoint(awsEndpoint string) S3ServiceOption {
-	return func(s *s3Service) {
+func WithAWSEndpoint(awsEndpoint string) ServiceOption {
+	return func(s *service) {
 		s.awsEndpoint = awsEndpoint
 	}
 }
 
 // WithRegion sets the AWS client region
-func WithRegion(region string) S3ServiceOption {
-	return func(s *s3Service) {
+func WithRegion(region string) ServiceOption {
+	return func(s *service) {
 		s.region = region
 	}
 }
 
-func (s *s3Service) GetAllBuckets(ctx context.Context) ([]Bucket, error) {
+func (s *service) GetAllBuckets(ctx context.Context) ([]Bucket, error) {
 	result, err := s.client.ListBuckets(ctx, &s3.ListBucketsInput{})
 	if err != nil {
 		return nil, err
@@ -103,7 +103,7 @@ func (s *s3Service) GetAllBuckets(ctx context.Context) ([]Bucket, error) {
 	return buckets, nil
 }
 
-func (s *s3Service) CreateBucketSimple(ctx context.Context, bucketName string, region string, versioned bool) error {
+func (s *service) CreateBucketSimple(ctx context.Context, bucketName string, region string, versioned bool) error {
 	_, err := s.client.CreateBucket(ctx, &s3.CreateBucketInput{
 		Bucket: &bucketName,
 		ACL:    types.BucketCannedACLPrivate,
@@ -130,7 +130,7 @@ func (s *s3Service) CreateBucketSimple(ctx context.Context, bucketName string, r
 	return nil
 }
 
-func (s *s3Service) PutObjectSimple(ctx context.Context, bucketName string, keyName string, body io.Reader) (*string, *string, error) {
+func (s *service) PutObjectSimple(ctx context.Context, bucketName string, keyName string, body io.Reader) (*string, *string, error) {
 	result, err := s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: &bucketName,
 		Key:    &keyName,
