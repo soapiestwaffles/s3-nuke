@@ -13,7 +13,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/soapiestwaffles/s3-nuke/internal/pkg/assets"
 	"github.com/soapiestwaffles/s3-nuke/internal/pkg/generators"
-	"github.com/soapiestwaffles/s3-nuke/pkg/aws"
+	"github.com/soapiestwaffles/s3-nuke/pkg/aws/s3"
 )
 
 const releaseURL = "https://github.com/soapiestwaffles/s3-nuke/release"
@@ -53,11 +53,11 @@ func main() {
 		fmt.Println("Using AWS endpoint:", cli.AWSEndpoint)
 	}
 	// Set up S3 client
-	var s3 aws.S3Service
+	var s3 s3.S3Service
 	if cli.Region == "" {
-		s3 = aws.NewS3Service(aws.WithAWSEndpoint(cli.AWSEndpoint), aws.WithRegion(cli.Region))
+		s3 = s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint), s3.WithRegion(cli.Region))
 	} else {
-		s3 = aws.NewS3Service(aws.WithAWSEndpoint(cli.AWSEndpoint))
+		s3 = s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint))
 	}
 
 	// Get list of buckets

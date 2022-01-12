@@ -1,4 +1,4 @@
-package aws
+package s3
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/middleware"
@@ -25,8 +25,8 @@ type S3APIMockFail struct {
 	t       *testing.T
 }
 
-func TestNewS3Service(t *testing.T) {
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+func TestNewService(t *testing.T) {
+	cfg, err := awsconfig.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		t.Errorf("error creating aws sdk default config: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestNewS3Service(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewS3Service(WithS3API(tt.s3Client))
+			got := NewService(WithS3API(tt.s3Client))
 			if got == nil {
 				t.Errorf("NewS3Service() returned nil when it wasn't supposed to")
 			} else {
@@ -68,7 +68,7 @@ func TestNewS3Service(t *testing.T) {
 
 func Test_s3Service_GetAllBuckets(t *testing.T) {
 	t.Run("successful", func(t *testing.T) {
-		s3 := NewS3Service(WithS3API(&S3APIMock{options: s3.Options{}}))
+		s3 := NewService(WithS3API(&S3APIMock{options: s3.Options{}}))
 
 		result, err := s3.GetAllBuckets(context.Background())
 		if err != nil {
@@ -86,50 +86,13 @@ func Test_s3Service_GetAllBuckets(t *testing.T) {
 	})
 
 	t.Run("fail", func(t *testing.T) {
-		s3 := NewS3Service(WithS3API(&S3APIMockFail{options: s3.Options{}}))
+		s3 := NewService(WithS3API(&S3APIMockFail{options: s3.Options{}}))
 		_, err := s3.GetAllBuckets(context.Background())
 		if err == nil {
 			t.Errorf("expected to get error")
 			return
 		}
 	})
-}
-
-func Test_newConfig(t *testing.T) {
-	tests := []struct {
-		name        string
-		awsEndpoint string
-		wantErr     bool
-	}{
-		{
-			name:        "endpoint not set",
-			awsEndpoint: "",
-			wantErr:     false,
-		},
-		{
-			name:        "endpoint set",
-			awsEndpoint: "http://test-endpoint.com:1234",
-			wantErr:     false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := newConfig("us-west-2", tt.awsEndpoint)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("newConfig() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if tt.awsEndpoint == "" {
-				if got.EndpointResolverWithOptions != nil {
-					t.Errorf("%s: newConfig() error, EndpointResolverWithOptions was set but was supposed to be nil", tt.name)
-				}
-			} else {
-				if got.EndpointResolverWithOptions == nil {
-					t.Errorf("%s: newConfig() error, EndpointResolveWithOptions was nil but was supposed to be set", tt.name)
-				}
-			}
-		})
-	}
 }
 
 func TestWithAWSEndpoint(t *testing.T) {
@@ -248,7 +211,7 @@ func Test_s3Service_CreateBucketSimple(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			s := NewS3Service(
+			s := NewService(
 				WithS3API(tt.client))
 
 			if err := s.CreateBucketSimple(tt.args.ctx, tt.args.bucketName, tt.args.region, tt.args.versioned); (err != nil) != tt.wantErr {
@@ -308,7 +271,7 @@ func Test_s3Service_PutObjectSimple(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			s := NewS3Service(
+			s := NewService(
 				WithS3API(tt.client))
 
 			_, _, err := s.PutObjectSimple(tt.args.ctx, tt.args.bucketName, tt.args.keyName, tt.args.body)
