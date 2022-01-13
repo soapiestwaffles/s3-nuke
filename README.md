@@ -17,7 +17,7 @@ with a little more interactivity. (Also, I was bored 😊)
 
 ### s3-gen
 
-This tool was created for test s3-nuke. This tool will generate `num-buckets` number of buckets, each containing `num-objects` number of objects (containing random data), with `num-versions` number of versions. If `num-versions` < 2, s3-gen will create the buckets with versioning disabled.
+This tool was created mainly for testing s3-nuke. This tool will generate `num-buckets` number of buckets, each containing `num-objects` number of objects (containing random data), with `num-versions` number of versions. If `num-versions` < 2, s3-gen will create the buckets with versioning disabled.
 
 #### Running s3-gen
 
