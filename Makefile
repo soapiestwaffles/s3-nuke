@@ -13,6 +13,15 @@ RESET  := $(shell tput -Txterm sgr0)
 
 all: help
 
+## Build:
+s3-gen: ## Build s3-gen
+	@echo "Building s3-gen..."
+	@$(GOCMD) build -o bin/s3-gen ./tools/s3-gen/s3-gen.go
+
+clean: ## Clean up after builds
+	@rm bin/s3-gen || true
+	@rmdir bin
+
 ## Test:
 test: ## Run tests
 ifeq ($(EXPORT_RESULT), true)

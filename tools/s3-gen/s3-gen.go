@@ -11,7 +11,7 @@ import (
 	"github.com/gosuri/uiprogress"
 	"github.com/manifoldco/promptui"
 	"github.com/soapiestwaffles/s3-nuke/internal/pkg/generators"
-	"github.com/soapiestwaffles/s3-nuke/pkg/aws"
+	"github.com/soapiestwaffles/s3-nuke/pkg/aws/s3"
 )
 
 var (
@@ -54,7 +54,7 @@ func main() {
 	fmt.Println("")
 
 	// Set up S3 client
-	s3 := aws.NewS3Service(aws.WithRegion(cli.Region), aws.WithAWSEndpoint(cli.AWSEndpoint))
+	s3 := s3.NewService(s3.WithRegion(cli.Region), s3.WithAWSEndpoint(cli.AWSEndpoint))
 
 	// Init progress bar
 	uiprogress.Start()
