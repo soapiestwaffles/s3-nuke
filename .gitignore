@@ -19,6 +19,7 @@
 
 # Binaries
 dist/
+bin/
 
 # VSCode Settings
 .vscode/
