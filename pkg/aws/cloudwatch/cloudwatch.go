@@ -14,7 +14,11 @@ import (
 
 type Service interface {
 	// GetS3ObjectCount returns the current amount of objects in an S3 bucket at the current time from ALL storage types
-	GetS3ObjectCount(ctx context.Context, bucketName string, region string) error
+	//
+	// time units:
+	//   `startTimeDiff` - hours
+	//   `period`        - seconds
+	GetS3ObjectCount(ctx context.Context, bucketName string, startTimeDiff int, period int32) error
 }
 
 // ServiceOption is used with NewS3Service and configures the newly created s3Service
@@ -77,15 +81,15 @@ func newClient(region string, awsEndpoint string) *cloudwatch.Client {
 	return cloudwatch.NewFromConfig(cfg)
 }
 
-func (s *service) GetS3ObjectCount(ctx context.Context, bucketName string, region string) error {
-	diffInHours := 48
-	period := 3600
+func (s *service) GetS3ObjectCount(ctx context.Context, bucketName string, startTimeDiff int, period int32) error {
 	result, err := s.client.GetMetricData(ctx, &cloudwatch.GetMetricDataInput{
 		EndTime:   aws.Time(time.Unix(time.Now().Unix(), 0)),
-		StartTime: aws.Time(time.Unix(time.Now().Add(time.Duration(-diffInHours)*time.Hour).Unix(), 0)),
+		StartTime: aws.Time(time.Unix(time.Now().Add(time.Duration(-startTimeDiff)*time.Hour).Unix(), 0)),
 		MetricDataQueries: []types.MetricDataQuery{
 			{
-				Id: aws.String("GetS3ObjectCount"),
+				Id:    aws.String("m1"),
+				Label: aws.String("Number of objects"),
+				// Period: aws.Int32(int32(period)),
 				MetricStat: &types.MetricStat{
 					Metric: &types.Metric{
 						Namespace:  aws.String("AWS/S3"),
@@ -101,7 +105,7 @@ func (s *service) GetS3ObjectCount(ctx context.Context, bucketName string, regio
 							},
 						},
 					},
-					Period: aws.Int32(int32(period)),
+					Period: aws.Int32(period),
 					Stat:   aws.String("Average"),
 				},
 			},
@@ -112,7 +116,9 @@ func (s *service) GetS3ObjectCount(ctx context.Context, bucketName string, regio
 		return err
 	}
 
-	spew.Dump(result)
+	spew.Dump(result.Messages)
+	spew.Dump(result.MetricDataResults)
+	spew.Dump(result.NextToken)
 
 	return nil
 }

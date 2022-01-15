@@ -14,13 +14,27 @@ RESET  := $(shell tput -Txterm sgr0)
 all: help
 
 ## Build:
-s3-gen: ## Build s3-gen
+build-all: s3-gen s3-metrics ## Build all binaries
+	@echo "Building all binaries..."
+
+s3-gen: ## Build s3-gen binary
 	@echo "Building s3-gen..."
 	@$(GOCMD) build -o bin/s3-gen ./tools/s3-gen/s3-gen.go
 
-clean: ## Clean up after builds
+s3-metrics: ## Build s3-metrics binary
+	@echo "Building s3-metrics..."
+	@$(GOCMD) build -o bin/s3-metrics ./tools/s3-metrics/s3-metrics.go
+
+clean:  ## Clean up after builds
 	@rm bin/s3-gen || true
 	@rmdir bin
+
+## Run:
+run-s3-gen: ## Run s3-gen from source
+	@$(GOCMD) run ./tools/s3-gen/s3-gen.go
+
+run-s3-metrics: ## Run s3-metrics from source
+	@$(GOCMD) run ./tools/s3-metrics/s3-metrics.go
 
 ## Test:
 test: ## Run tests
