@@ -84,7 +84,7 @@ func (s *service) GetS3ObjectCount(ctx context.Context, bucketName string, regio
 		EndTime:   aws.Time(time.Unix(time.Now().Unix(), 0)),
 		StartTime: aws.Time(time.Unix(time.Now().Add(time.Duration(-diffInHours)*time.Hour).Unix(), 0)),
 		MetricDataQueries: []types.MetricDataQuery{
-			types.MetricDataQuery{
+			{
 				Id: aws.String("GetS3ObjectCount"),
 				MetricStat: &types.MetricStat{
 					Metric: &types.Metric{
