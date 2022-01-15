@@ -3,12 +3,18 @@ package cloudwatch
 import (
 	"context"
 	"os"
+	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/config"
 )
 
 type Service interface {
+	// GetS3ObjectCount returns the current amount of objects in an S3 bucket at the current time from ALL storage types
+	GetS3ObjectCount(ctx context.Context, bucketName string, region string) error
 }
 
 // ServiceOption is used with NewS3Service and configures the newly created s3Service
@@ -69,6 +75,46 @@ func newClient(region string, awsEndpoint string) *cloudwatch.Client {
 	}
 
 	return cloudwatch.NewFromConfig(cfg)
+}
+
+func (s *service) GetS3ObjectCount(ctx context.Context, bucketName string, region string) error {
+	diffInHours := 48
+	period := 3600
+	result, err := s.client.GetMetricData(ctx, &cloudwatch.GetMetricDataInput{
+		EndTime:   aws.Time(time.Unix(time.Now().Unix(), 0)),
+		StartTime: aws.Time(time.Unix(time.Now().Add(time.Duration(-diffInHours)*time.Hour).Unix(), 0)),
+		MetricDataQueries: []types.MetricDataQuery{
+			types.MetricDataQuery{
+				Id: aws.String("GetS3ObjectCount"),
+				MetricStat: &types.MetricStat{
+					Metric: &types.Metric{
+						Namespace:  aws.String("AWS/S3"),
+						MetricName: aws.String("NumberOfObjects"),
+						Dimensions: []types.Dimension{
+							{
+								Name:  aws.String("BucketName"),
+								Value: aws.String(bucketName),
+							},
+							{
+								Name:  aws.String("StorageType"),
+								Value: aws.String("AllStorageTypes"),
+							},
+						},
+					},
+					Period: aws.Int32(int32(period)),
+					Stat:   aws.String("Average"),
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		return err
+	}
+
+	spew.Dump(result)
+
+	return nil
 }
 
 // =====
