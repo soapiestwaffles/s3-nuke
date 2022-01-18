@@ -23,7 +23,14 @@ TODO
 
 This tool will return back the current and historical approximate number of objects in a bucket using CloudWatch.
 
-#### Running s3-metrics
+#### Installing s3-metrics binary
+
+* using `go`:
+```
+go install github.com/soapiestwaffles/s3-nuke/tools/s3-metrics@latest
+```
+
+#### Running s3-metrics from source
 ```
 go run tools/s3-metrics/main.go
 ```
@@ -68,7 +75,14 @@ Metric last updated: 2022-01-17 00:00:00 +0000 UTC
 
 This tool was created mainly for testing s3-nuke. This tool will generate `num-buckets` number of buckets, each containing `num-objects` number of objects (containing random data), with `num-versions` number of versions. If `num-versions` < 2, s3-gen will create the buckets with versioning disabled.
 
-#### Running s3-gen
+#### Installing s3-metrics binary
+
+* using `go`:
+```
+go install github.com/soapiestwaffles/s3-nuke/tools/s3-gen@latest
+```
+
+#### Running s3-gen from source
 
 ```
 go run tools/s3-gen/main.go --num-buckets=INT --num-objects=INT --num-versions=INT
