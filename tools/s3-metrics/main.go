@@ -8,6 +8,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/briandowns/spinner"
+	"github.com/dustin/go-humanize"
 	"github.com/guptarohit/asciigraph"
 	"github.com/soapiestwaffles/s3-nuke/internal/pkg/ui/tui"
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/cloudwatch"
@@ -68,7 +69,7 @@ func main() {
 		fmt.Println("Error detecting bucket region!", err)
 		os.Exit(1)
 	}
-	fmt.Println("--> bucket located in", bucketRegion)
+	fmt.Println("🌎 -> bucket located in", bucketRegion)
 	fmt.Println("")
 
 	cloudwatchSvc := cloudwatch.NewService(cloudwatch.WithAWSEndpoint(cli.AWSEndpoint), cloudwatch.WithRegion(bucketRegion))
@@ -91,6 +92,6 @@ func main() {
 	graph := asciigraph.Plot(objectCountResults.Values, asciigraph.Width(60), asciigraph.Height(10), asciigraph.Caption("Object Count for past 30 Days"))
 	fmt.Println(graph)
 	fmt.Println("")
-	fmt.Println("Approx. objects currently in bucket:", objInBucket)
-	fmt.Println("Metric last updated:", lastUpdate)
+	fmt.Println("Approx. objects currently in bucket:", humanize.Comma(int64(objInBucket)))
+	fmt.Printf("Metric last updated: %s at %s\n", humanize.Time(lastUpdate.Local()), lastUpdate.Local())
 }
