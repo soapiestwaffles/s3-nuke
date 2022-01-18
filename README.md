@@ -13,7 +13,32 @@ _...because deleting any bucket with files is just plain annoying._
 While there are several other scripts and projects that do the same function, I wanted something
 with a little more interactivity. (Also, I was bored 😊)
 
+### Required AWS policy
+
+TODO
+
 ## Misc Tools
+
+### s3-metrics
+
+This tool will return back the current and historical approximate number of objects in a bucket using CloudWatch.
+
+### Running s3-metrics
+
+```
+go run tools/s3-metrics/main.go
+```
+
+### Usage/Available flags
+
+```
+s3-metrics tool: get bucket object metrics for a particular bucket
+
+Flags:
+  -h, --help                   Show context-sensitive help.
+  -e, --aws-endpoint=STRING    override AWS endpoint address ($AWS_ENDPOINT)
+  -r, --region="us-west-2"     specify region to create bucket and objects in ($AWS_REGION)
+```
 
 ### s3-gen
 
@@ -21,11 +46,12 @@ This tool was created mainly for testing s3-nuke. This tool will generate `num-b
 
 #### Running s3-gen
 
-```console
-$ go run tools/s3-gen/s3-gen.go --num-buckets=INT --num-objects=INT --num-versions=INT
+```
+go run tools/s3-gen/main.go --num-buckets=INT --num-objects=INT --num-versions=INT
 ```
 
 #### Usage/Available flags
+
 ```
 s3-nuke tool: generate a set of randomized buckets each containing a set of randomized objects and versions
 
