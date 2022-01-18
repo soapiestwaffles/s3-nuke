@@ -23,13 +23,12 @@ TODO
 
 This tool will return back the current and historical approximate number of objects in a bucket using CloudWatch.
 
-### Running s3-metrics
-
+#### Running s3-metrics
 ```
 go run tools/s3-metrics/main.go
 ```
 
-### Usage/Available flags
+#### Usage/Available flags
 
 ```
 s3-metrics tool: get bucket object metrics for a particular bucket
@@ -38,6 +37,31 @@ Flags:
   -h, --help                   Show context-sensitive help.
   -e, --aws-endpoint=STRING    override AWS endpoint address ($AWS_ENDPOINT)
   -r, --region="us-west-2"     specify region to create bucket and objects in ($AWS_REGION)
+```
+
+#### Example output
+```console
+$ go run tools/s3-metrics/main.go
+
+🪣  my-s3-bucket
+
+--> bucket located in us-east-1
+
+ 544015 ┤                                         ╭─────────────────
+ 544004 ┤                                       ╭─╯
+ 543994 ┤                                     ╭─╯
+ 543983 ┤                                    ╭╯
+ 543973 ┤                                   ╭╯
+ 543962 ┤                                  ╭╯
+ 543951 ┤                                 ╭╯
+ 543941 ┤                                ╭╯
+ 543930 ┤                           ╭────╯
+ 543920 ┤              ╭────────────╯
+ 543909 ┼──────────────╯
+                        Object Count for past 30 Days
+
+Approx. objects currently in bucket: 544015
+Metric last updated: 2022-01-17 00:00:00 +0000 UTC
 ```
 
 ### s3-gen
