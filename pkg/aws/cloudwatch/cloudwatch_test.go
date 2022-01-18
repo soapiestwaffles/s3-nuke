@@ -24,6 +24,14 @@ type CloudwatchAPIMockFail struct {
 	t       *testing.T
 }
 
+var now time.Time = time.Now()
+var cloudwatchTimestamps []time.Time = []time.Time{
+	now,
+	now.Add(-time.Hour * 24),
+	now.Add(-time.Hour * 48),
+	now.Add(-time.Hour * 72),
+}
+
 func TestNewService(t *testing.T) {
 	cfg, err := awsconfig.LoadDefaultConfig(context.TODO())
 	if err != nil {
@@ -35,14 +43,14 @@ func TestNewService(t *testing.T) {
 		client CloudwatchAPI
 	}{
 		{
-			name: "s3 API mock",
+			name: "cloudwatch API mock",
 			client: CloudwatchAPIMock{
 				options: cloudwatch.Options{},
 				t:       t,
 			},
 		},
 		{
-			name:   "aws s3 service",
+			name:   "aws cloudwatch service",
 			client: cloudwatch.NewFromConfig(cfg),
 		},
 		{
@@ -114,6 +122,93 @@ func TestWithRegion(t *testing.T) {
 	}
 }
 
+func Test_service_GetS3ObjectCount(t *testing.T) {
+	cloudwatchMock := CloudwatchAPIMock{
+		options: cloudwatch.Options{},
+		t:       t,
+	}
+	cloudwatchMockFail := CloudwatchAPIMockFail{
+		options: cloudwatch.Options{},
+		t:       t,
+	}
+	type fields struct {
+		client      CloudwatchAPI
+		awsEndpoint string
+		region      string
+	}
+	type args struct {
+		ctx           context.Context
+		bucketName    string
+		startTimeDiff int
+		period        int32
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    *S3ObjectCountResults
+		wantErr bool
+	}{
+		{
+			name: "get bucket objects",
+			fields: fields{
+				client:      cloudwatchMock,
+				awsEndpoint: "",
+				region:      "us-west-2",
+			},
+			args: args{
+				ctx:           context.TODO(),
+				bucketName:    "testbucket",
+				startTimeDiff: 72,
+				period:        60,
+			},
+			want: &S3ObjectCountResults{
+				Timestamps: cloudwatchTimestamps,
+				Values: []float64{
+					10.0,
+					20.0,
+					30.0,
+					40.0,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "fail",
+			fields: fields{
+				client:      cloudwatchMockFail,
+				awsEndpoint: "",
+				region:      "us-west-2",
+			},
+			args: args{
+				ctx:           context.TODO(),
+				bucketName:    "failbucket",
+				startTimeDiff: 72,
+				period:        60,
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &service{
+				client:      tt.fields.client,
+				awsEndpoint: tt.fields.awsEndpoint,
+				region:      tt.fields.region,
+			}
+			got, err := s.GetS3ObjectCount(tt.args.ctx, tt.args.bucketName, tt.args.startTimeDiff, tt.args.period)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("service.GetS3ObjectCount() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("service.GetS3ObjectCount() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 // =================
 
 func (s CloudwatchAPIMock) GetMetricData(ctx context.Context,
@@ -123,14 +218,19 @@ func (s CloudwatchAPIMock) GetMetricData(ctx context.Context,
 	output := &cloudwatch.GetMetricDataOutput{
 		Messages: []types.MessageData{},
 		MetricDataResults: []types.MetricDataResult{{
-			Id:         aws.String("id1234"),
-			Label:      aws.String("somelabel"),
+			Id:         aws.String("id"),
+			Label:      aws.String("sample data"),
 			Messages:   []types.MessageData{},
 			StatusCode: "Complete",
-			Timestamps: []time.Time{},
-			Values:     []float64{},
+			Timestamps: cloudwatchTimestamps,
+			Values: []float64{
+				10.0,
+				20.0,
+				30.0,
+				40.0,
+			},
 		}},
-		NextToken:      aws.String("abc123def456"),
+		NextToken:      nil,
 		ResultMetadata: middleware.Metadata{},
 	}
 
@@ -143,46 +243,3 @@ func (s CloudwatchAPIMockFail) GetMetricData(ctx context.Context,
 
 	return nil, errors.New("simulated error case")
 }
-
-/*
-([]types.MetricDataResult) (len=1 cap=1) {
- (types.MetricDataResult) {
-  Id: (*string)(0xc000f94850)((len=2) "m1"),
-  Label: (*string)(0xc000f94840)((len=17) "Number of objects"),
-  Messages: ([]types.MessageData) <nil>,
-  StatusCode: (types.StatusCode) (len=8) "Complete",
-  Timestamps: ([]time.Time) (len=13 cap=16) {
-   (time.Time) 2022-01-17 00:00:00 +0000 UTC,
-   (time.Time) 2022-01-16 00:00:00 +0000 UTC,
-   (time.Time) 2022-01-15 00:00:00 +0000 UTC,
-   (time.Time) 2022-01-14 00:00:00 +0000 UTC,
-   (time.Time) 2022-01-13 00:00:00 +0000 UTC,
-   (time.Time) 2022-01-12 00:00:00 +0000 UTC,
-   (time.Time) 2022-01-11 00:00:00 +0000 UTC,
-   (time.Time) 2022-01-10 00:00:00 +0000 UTC,
-   (time.Time) 2022-01-09 00:00:00 +0000 UTC,
-   (time.Time) 2022-01-08 00:00:00 +0000 UTC,
-   (time.Time) 2022-01-07 00:00:00 +0000 UTC,
-   (time.Time) 2022-01-06 00:00:00 +0000 UTC,
-   (time.Time) 2022-01-05 00:00:00 +0000 UTC
-  },
-  Values: ([]float64) (len=13 cap=16) {
-   (float64) 1,
-   (float64) 1,
-   (float64) 1,
-   (float64) 1,
-   (float64) 1,
-   (float64) 1,
-   (float64) 1,
-   (float64) 1,
-   (float64) 1,
-   (float64) 1,
-   (float64) 1,
-   (float64) 1,
-   (float64) 1
-  },
-  noSmithyDocumentSerde: (document.NoSerde) {
-  }
- }
-}
-*/
