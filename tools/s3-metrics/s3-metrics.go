@@ -29,13 +29,6 @@ func main() {
 		fmt.Println("Using AWS endpoint:", cli.AWSEndpoint)
 	}
 
-	var cloudwatchSvc cloudwatch.Service
-	if cli.Region == "" {
-		cloudwatchSvc = cloudwatch.NewService(cloudwatch.WithAWSEndpoint(cli.AWSEndpoint), cloudwatch.WithRegion(cli.Region))
-	} else {
-		cloudwatchSvc = cloudwatch.NewService(cloudwatch.WithAWSEndpoint(cli.AWSEndpoint))
-	}
-
 	// Set up S3 client
 	var s3svc s3.Service
 	if cli.Region == "" {
@@ -69,6 +62,17 @@ func main() {
 	}
 
 	fmt.Println("")
+
+	bucketRegion, err := s3svc.GetBucektRegion(context.TODO(), selectedBucket)
+	if err != nil {
+		fmt.Println("Error detecting bucket region!", err)
+		os.Exit(1)
+	}
+	fmt.Println("bucket located in", bucketRegion)
+
+	var cloudwatchSvc cloudwatch.Service
+	cloudwatchSvc = cloudwatch.NewService(cloudwatch.WithAWSEndpoint(cli.AWSEndpoint), cloudwatch.WithRegion(bucketRegion))
+
 	// loadingSpinner.Suffix = " fetching bucket metrics..."
 	// loadingSpinner.Start()
 	err = cloudwatchSvc.GetS3ObjectCount(context.TODO(), selectedBucket, 336, 60)
