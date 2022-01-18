@@ -104,6 +104,12 @@ Flags:
       --yes                      bypass user prompt and proceed with action automatically
 ```
 
+## Building
+
+### Requirements
+
+* go >= 1.17.5
+
 ## License
 
 MIT License
