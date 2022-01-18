@@ -71,8 +71,7 @@ func main() {
 	fmt.Println("--> bucket located in", bucketRegion)
 	fmt.Println("")
 
-	var cloudwatchSvc cloudwatch.Service
-	cloudwatchSvc = cloudwatch.NewService(cloudwatch.WithAWSEndpoint(cli.AWSEndpoint), cloudwatch.WithRegion(bucketRegion))
+	cloudwatchSvc := cloudwatch.NewService(cloudwatch.WithAWSEndpoint(cli.AWSEndpoint), cloudwatch.WithRegion(bucketRegion))
 
 	// loadingSpinner.Suffix = " fetching bucket metrics..."
 	// loadingSpinner.Start()
