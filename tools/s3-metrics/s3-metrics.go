@@ -8,6 +8,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/briandowns/spinner"
+	"github.com/guptarohit/asciigraph"
 	"github.com/soapiestwaffles/s3-nuke/internal/pkg/ui/tui"
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/cloudwatch"
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/s3"
@@ -60,7 +61,6 @@ func main() {
 		fmt.Println("Error selecting bucket! Exiting.")
 		os.Exit(1)
 	}
-
 	fmt.Println("")
 
 	bucketRegion, err := s3svc.GetBucektRegion(context.TODO(), selectedBucket)
@@ -68,17 +68,24 @@ func main() {
 		fmt.Println("Error detecting bucket region!", err)
 		os.Exit(1)
 	}
-	fmt.Println("bucket located in", bucketRegion)
+	fmt.Println("--> bucket located in", bucketRegion)
+	fmt.Println("")
 
 	var cloudwatchSvc cloudwatch.Service
 	cloudwatchSvc = cloudwatch.NewService(cloudwatch.WithAWSEndpoint(cli.AWSEndpoint), cloudwatch.WithRegion(bucketRegion))
 
 	// loadingSpinner.Suffix = " fetching bucket metrics..."
 	// loadingSpinner.Start()
-	err = cloudwatchSvc.GetS3ObjectCount(context.TODO(), selectedBucket, 336, 60)
+	objectCountResults, err := cloudwatchSvc.GetS3ObjectCount(context.TODO(), selectedBucket, 720, 60)
 	if err != nil {
 		fmt.Println("error:", err)
 		os.Exit(1)
 	}
+
+	graph := asciigraph.Plot(objectCountResults.Values, asciigraph.Width(60), asciigraph.Height(10), asciigraph.Caption("Object Count for past 30 Days"))
+	fmt.Println(graph)
+	fmt.Println("")
+	fmt.Println("Approx. objects currently in bucket:", objectCountResults.Values[0])
+	fmt.Println("Metric last updated:", objectCountResults.Timestamps[0])
 
 }

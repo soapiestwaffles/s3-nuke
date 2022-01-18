@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/config"
 )
 
@@ -18,7 +17,15 @@ type Service interface {
 	// time units:
 	//   `startTimeDiff` - hours
 	//   `period`        - seconds
-	GetS3ObjectCount(ctx context.Context, bucketName string, startTimeDiff int, period int32) error
+	GetS3ObjectCount(ctx context.Context, bucketName string, startTimeDiff int, period int32) (*S3ObjectCountResults, error)
+}
+
+// S3ObjectCountResults contains the results from GetS3ObjectCount()
+//
+// Timestamps/values are ordered newest first at the 0th index and ordered descending
+type S3ObjectCountResults struct {
+	Timestamps []time.Time
+	Values     []float64
 }
 
 // ServiceOption is used with NewS3Service and configures the newly created s3Service
@@ -81,46 +88,60 @@ func newClient(region string, awsEndpoint string) *cloudwatch.Client {
 	return cloudwatch.NewFromConfig(cfg)
 }
 
-func (s *service) GetS3ObjectCount(ctx context.Context, bucketName string, startTimeDiff int, period int32) error {
-	result, err := s.client.GetMetricData(ctx, &cloudwatch.GetMetricDataInput{
-		EndTime:   aws.Time(time.Unix(time.Now().Unix(), 0)),
-		StartTime: aws.Time(time.Unix(time.Now().Add(time.Duration(-startTimeDiff)*time.Hour).Unix(), 0)),
-		MetricDataQueries: []types.MetricDataQuery{
-			{
-				Id:    aws.String("m1"),
-				Label: aws.String("Number of objects"),
-				// Period: aws.Int32(int32(period)),
-				MetricStat: &types.MetricStat{
-					Metric: &types.Metric{
-						Namespace:  aws.String("AWS/S3"),
-						MetricName: aws.String("NumberOfObjects"),
-						Dimensions: []types.Dimension{
-							{
-								Name:  aws.String("BucketName"),
-								Value: aws.String(bucketName),
-							},
-							{
-								Name:  aws.String("StorageType"),
-								Value: aws.String("AllStorageTypes"),
+func (s *service) GetS3ObjectCount(ctx context.Context, bucketName string, startTimeDiff int, period int32) (*S3ObjectCountResults, error) {
+	returnValues := &S3ObjectCountResults{}
+
+	var nextToken *string
+	for {
+		result, err := s.client.GetMetricData(ctx, &cloudwatch.GetMetricDataInput{
+			EndTime:   aws.Time(time.Unix(time.Now().Unix(), 0)),
+			StartTime: aws.Time(time.Unix(time.Now().Add(time.Duration(-startTimeDiff)*time.Hour).Unix(), 0)),
+			NextToken: nextToken,
+			MetricDataQueries: []types.MetricDataQuery{
+				{
+					Id:    aws.String("m1"),
+					Label: aws.String("Number of objects"),
+					// Period: aws.Int32(int32(period)),
+					MetricStat: &types.MetricStat{
+						Metric: &types.Metric{
+							Namespace:  aws.String("AWS/S3"),
+							MetricName: aws.String("NumberOfObjects"),
+							Dimensions: []types.Dimension{
+								{
+									Name:  aws.String("BucketName"),
+									Value: aws.String(bucketName),
+								},
+								{
+									Name:  aws.String("StorageType"),
+									Value: aws.String("AllStorageTypes"),
+								},
 							},
 						},
+						Period: aws.Int32(period),
+						Stat:   aws.String("Average"),
 					},
-					Period: aws.Int32(period),
-					Stat:   aws.String("Average"),
 				},
 			},
-		},
-	})
+		})
 
-	if err != nil {
-		return err
+		if err != nil {
+			return nil, err
+		}
+
+		// Copy this set of results into our returnValues
+		for _, r := range result.MetricDataResults {
+			returnValues.Values = append(returnValues.Values, r.Values...)
+			returnValues.Timestamps = append(returnValues.Timestamps, r.Timestamps...)
+		}
+
+		// Check if we have another set to load, if not, break the loop
+		if result.NextToken == nil {
+			break
+		}
+		nextToken = result.NextToken
 	}
 
-	spew.Dump(result.Messages)
-	spew.Dump(result.MetricDataResults)
-	spew.Dump(result.NextToken)
-
-	return nil
+	return returnValues, nil
 }
 
 // =====

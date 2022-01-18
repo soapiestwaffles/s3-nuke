@@ -143,3 +143,46 @@ func (s CloudwatchAPIMockFail) GetMetricData(ctx context.Context,
 
 	return nil, errors.New("simulated error case")
 }
+
+/*
+([]types.MetricDataResult) (len=1 cap=1) {
+ (types.MetricDataResult) {
+  Id: (*string)(0xc000f94850)((len=2) "m1"),
+  Label: (*string)(0xc000f94840)((len=17) "Number of objects"),
+  Messages: ([]types.MessageData) <nil>,
+  StatusCode: (types.StatusCode) (len=8) "Complete",
+  Timestamps: ([]time.Time) (len=13 cap=16) {
+   (time.Time) 2022-01-17 00:00:00 +0000 UTC,
+   (time.Time) 2022-01-16 00:00:00 +0000 UTC,
+   (time.Time) 2022-01-15 00:00:00 +0000 UTC,
+   (time.Time) 2022-01-14 00:00:00 +0000 UTC,
+   (time.Time) 2022-01-13 00:00:00 +0000 UTC,
+   (time.Time) 2022-01-12 00:00:00 +0000 UTC,
+   (time.Time) 2022-01-11 00:00:00 +0000 UTC,
+   (time.Time) 2022-01-10 00:00:00 +0000 UTC,
+   (time.Time) 2022-01-09 00:00:00 +0000 UTC,
+   (time.Time) 2022-01-08 00:00:00 +0000 UTC,
+   (time.Time) 2022-01-07 00:00:00 +0000 UTC,
+   (time.Time) 2022-01-06 00:00:00 +0000 UTC,
+   (time.Time) 2022-01-05 00:00:00 +0000 UTC
+  },
+  Values: ([]float64) (len=13 cap=16) {
+   (float64) 1,
+   (float64) 1,
+   (float64) 1,
+   (float64) 1,
+   (float64) 1,
+   (float64) 1,
+   (float64) 1,
+   (float64) 1,
+   (float64) 1,
+   (float64) 1,
+   (float64) 1,
+   (float64) 1,
+   (float64) 1
+  },
+  noSmithyDocumentSerde: (document.NoSerde) {
+  }
+ }
+}
+*/
