@@ -81,10 +81,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	objInBucket := objectCountResults.Values[0]
+	lastUpdate := objectCountResults.Timestamps[0]
+
+	for i, j := 0, len(objectCountResults.Values)-1; i < j; i, j = i+1, j-1 {
+		objectCountResults.Values[i], objectCountResults.Values[j] = objectCountResults.Values[j], objectCountResults.Values[i]
+	}
+
 	graph := asciigraph.Plot(objectCountResults.Values, asciigraph.Width(60), asciigraph.Height(10), asciigraph.Caption("Object Count for past 30 Days"))
 	fmt.Println(graph)
 	fmt.Println("")
-	fmt.Println("Approx. objects currently in bucket:", objectCountResults.Values[0])
-	fmt.Println("Metric last updated:", objectCountResults.Timestamps[0])
-
+	fmt.Println("Approx. objects currently in bucket:", objInBucket)
+	fmt.Println("Metric last updated:", lastUpdate)
 }
