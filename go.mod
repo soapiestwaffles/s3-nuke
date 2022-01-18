@@ -7,9 +7,9 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.13.0
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.15.0
 	github.com/aws/smithy-go v1.10.0
-	github.com/davecgh/go-spew v1.1.1
 	github.com/google/uuid v1.3.0
 	github.com/gosuri/uiprogress v0.0.1
+	github.com/guptarohit/asciigraph v0.5.2
 )
 
 require (
@@ -27,7 +27,6 @@ require (
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/gosuri/uilive v0.0.4 // indirect
-	github.com/guptarohit/asciigraph v0.5.2 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
