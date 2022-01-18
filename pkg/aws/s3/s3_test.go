@@ -283,6 +283,81 @@ func Test_s3Service_PutObjectSimple(t *testing.T) {
 	}
 }
 
+func Test_service_GetBucektRegion(t *testing.T) {
+	s3Mock := S3APIMock{
+		options: s3.Options{},
+		t:       t,
+	}
+	s3MockFail := S3APIMockFail{
+		options: s3.Options{},
+		t:       t,
+	}
+
+	type fields struct {
+		client      S3API
+		awsEndpoint string
+		region      string
+	}
+	tests := []struct {
+		name       string
+		fields     fields
+		bucketName string
+		want       string
+		wantErr    bool
+	}{
+		{
+			name: "get bucket region us-west-2",
+			fields: fields{
+				client:      s3Mock,
+				awsEndpoint: "",
+				region:      "us-west-2",
+			},
+			bucketName: "testbucket",
+			want:       "us-west-2",
+			wantErr:    false,
+		},
+		{
+			name: "get bucket region us-east-1",
+			fields: fields{
+				client:      s3Mock,
+				awsEndpoint: "",
+				region:      "us-west-2",
+			},
+			bucketName: "testbucket-us-east-1",
+			want:       "us-east-1",
+			wantErr:    false,
+		},
+		{
+			name: "get bucket fail",
+			fields: fields{
+				client:      s3MockFail,
+				awsEndpoint: "",
+				region:      "us-west-2",
+			},
+			bucketName: "testbucket-us-east-1",
+			want:       "",
+			wantErr:    true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &service{
+				client:      tt.fields.client,
+				awsEndpoint: tt.fields.awsEndpoint,
+				region:      tt.fields.region,
+			}
+			got, err := s.GetBucektRegion(context.TODO(), tt.bucketName)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("service.GetBucektRegion() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("service.GetBucektRegion() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 // =================
 
 func (s S3APIMock) ListBuckets(ctx context.Context,
@@ -385,4 +460,34 @@ func (s S3APIMockFail) PutObject(ctx context.Context,
 	}
 
 	return nil, errors.New("simulated error case")
+}
+
+func (s S3APIMock) GetBucketLocation(ctx context.Context,
+	params *s3.GetBucketLocationInput,
+	optFns ...func(*s3.Options)) (*s3.GetBucketLocationOutput, error) {
+
+	s.t.Logf("get bucket location [%s]", *params.Bucket)
+
+	if *params.Bucket == "testbucket-us-east-1" {
+		return &s3.GetBucketLocationOutput{
+			LocationConstraint: "",
+			ResultMetadata:     middleware.Metadata{},
+		}, nil
+	}
+
+	return &s3.GetBucketLocationOutput{
+		LocationConstraint: types.BucketLocationConstraintUsWest2,
+		ResultMetadata:     middleware.Metadata{},
+	}, nil
+
+}
+
+func (s S3APIMockFail) GetBucketLocation(ctx context.Context,
+	params *s3.GetBucketLocationInput,
+	optFns ...func(*s3.Options)) (*s3.GetBucketLocationOutput, error) {
+
+	s.t.Logf("get bucket location [%s]", *params.Bucket)
+
+	return nil, errors.New("simulated error case")
+
 }

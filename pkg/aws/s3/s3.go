@@ -26,6 +26,9 @@ type Service interface {
 	// returns Etag, VersionID, and Error
 	// (This function is mainly used in s3-nuke for testing)
 	PutObjectSimple(ctx context.Context, bucketName string, keyName string, body io.Reader) (*string, *string, error)
+
+	// GetBucketRegion will return the region of a bucket
+	GetBucektRegion(ctx context.Context, bucketName string) (string, error)
 }
 
 // Bucket contains information about an S3 bucket
@@ -144,6 +147,23 @@ func (s *service) PutObjectSimple(ctx context.Context, bucketName string, keyNam
 	return result.ETag, result.VersionId, nil
 }
 
+func (s *service) GetBucektRegion(ctx context.Context, bucketName string) (string, error) {
+	result, err := s.client.GetBucketLocation(ctx, &s3.GetBucketLocationInput{
+		Bucket: &bucketName,
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	if result.LocationConstraint == "" {
+		return "us-east-1", nil
+	}
+
+	return string(result.LocationConstraint), nil
+
+}
+
 func newS3Client(region string, awsEndpoint string) *s3.Client {
 	// Initialize AWS S3 Client
 	cfg, err := config.New(region, awsEndpoint)
@@ -173,4 +193,8 @@ type S3API interface {
 	PutObject(ctx context.Context,
 		params *s3.PutObjectInput,
 		optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
+
+	GetBucketLocation(ctx context.Context,
+		params *s3.GetBucketLocationInput,
+		optFns ...func(*s3.Options)) (*s3.GetBucketLocationOutput, error)
 }
