@@ -11,6 +11,7 @@ import (
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/config"
 )
 
+// StorageType defines the name of an S3 storage class
 type StorageType string
 
 const (
@@ -68,7 +69,7 @@ type S3ByteCountResults struct {
 	Values     []float64
 }
 
-// ServiceOption is used with NewS3Service and configures the newly created s3Service
+// ServiceOption is used with NewService and configures the newly created s3Service
 type ServiceOption func(s *service)
 
 type service struct {
@@ -77,7 +78,7 @@ type service struct {
 	region      string
 }
 
-// NewService returns an initialized S3Service
+// NewService returns an initialized Cloudwatch service
 func NewService(opts ...ServiceOption) Service {
 	svc := &service{}
 	for _, opt := range opts {
