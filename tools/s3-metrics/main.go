@@ -82,16 +82,66 @@ func main() {
 		os.Exit(1)
 	}
 
-	objInBucket := objectCountResults.Values[0]
-	lastUpdate := objectCountResults.Timestamps[0]
+	byteCountResults, err := cloudwatchSvc.GetS3ByteCount(context.TODO(), selectedBucket, cloudwatch.StandardStorage, 720, 60)
+	if err != nil {
+		fmt.Println("error:", err)
+		os.Exit(1)
+	}
 
+	if len(objectCountResults.Values) == 0 || len(byteCountResults.Values) == 0 {
+		fmt.Println("")
+		fmt.Println("no cloudwatch metrics found for bucket!")
+		os.Exit(0)
+	}
+
+	objInBucket := objectCountResults.Values[0]
+	objLastUpdate := objectCountResults.Timestamps[0]
+
+	bytesInBucket := byteCountResults.Values[0]
+	bytesLastUpdate := byteCountResults.Timestamps[0]
+
+	// ⠐⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠂
+	// ⠄⠄⣰⣾⣿⣿⣿⠿⠿⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣆⠄⠄
+	// ⠄⠄⣿⣿⣿⡿⠋⠄⡀⣿⣿⣿⣿⣿⣿⣿⣿⠿⠛⠋⣉⣉⣉⡉⠙⠻⣿⣿⠄⠄
+	// ⠄⠄⣿⣿⣿⣇⠔⠈⣿⣿⣿⣿⣿⡿⠛⢉⣤⣶⣾⣿⣿⣿⣿⣿⣿⣦⡀⠹⠄⠄
+	// ⠄⠄⣿⣿⠃⠄⢠⣾⣿⣿⣿⠟⢁⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡄⠄⠄
+	// ⠄⠄⣿⣿⣿⣿⣿⣿⣿⠟⢁⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⠄⠄
+	// ⠄⠄⣿⣿⣿⣿⣿⡟⠁⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠄⠄
+	// ⠄⠄⣿⣿⣿⣿⠋⢠⣾⣿⣿⣿⣿⣿⣿⡿⠿⠿⠿⠿⣿⣿⣿⣿⣿⣿⣿⣿⠄⠄
+	// ⠄⠄⣿⣿⡿⠁⣰⣿⣿⣿⣿⣿⣿⣿⣿⠗⠄⠄⠄⠄⣿⣿⣿⣿⣿⣿⣿⡟⠄⠄
+	// ⠄⠄⣿⡿⠁⣼⣿⣿⣿⣿⣿⣿⡿⠋⠄⠄⠄⣠⣄⢰⣿⣿⣿⣿⣿⣿⣿⠃⠄⠄
+	// ⠄⠄⡿⠁⣼⣿⣿⣿⣿⣿⣿⣿⡇⠄⢀⡴⠚⢿⣿⣿⣿⣿⣿⣿⣿⣿⡏⢠⠄⠄
+	// ⠄⠄⠃⢰⣿⣿⣿⣿⣿⣿⡿⣿⣿⠴⠋⠄⠄⢸⣿⣿⣿⣿⣿⣿⣿⡟⢀⣾⠄⠄
+	// ⠄⠄⢀⣿⣿⣿⣿⣿⣿⣿⠃⠈⠁⠄⠄⢀⣴⣿⣿⣿⣿⣿⣿⣿⡟⢀⣾⣿⠄⠄
+	// ⠄⠄⢸⣿⣿⣿⣿⣿⣿⣿⠄⠄⠄⠄⢶⣿⣿⣿⣿⣿⣿⣿⣿⠏⢀⣾⣿⣿⠄⠄
+	// ⠄⠄⣿⣿⣿⣿⣿⣿⣿⣷⣶⣶⣶⣶⣶⣿⣿⣿⣿⣿⣿⣿⠋⣠⣿⣿⣿⣿⠄⠄
+	// ⠄⠄⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⢁⣼⣿⣿⣿⣿⣿⠄⠄
+	// ⠄⠄⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⢁⣴⣿⣿⣿⣿⣿⣿⣿⠄⠄
+	// ⠄⠄⠈⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠟⢁⣴⣿⣿⣿⣿⠗⠄⠄⣿⣿⠄⠄
+	// ⠄⠄⣆⠈⠻⢿⣿⣿⣿⣿⣿⣿⠿⠛⣉⣤⣾⣿⣿⣿⣿⣿⣇⠠⠺⣷⣿⣿⠄⠄
+	// ⠄⠄⣿⣿⣦⣄⣈⣉⣉⣉⣡⣤⣶⣿⣿⣿⣿⣿⣿⣿⣿⠉⠁⣀⣼⣿⣿⣿⠄⠄
+	// ⠄⠄⠻⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣶⣾⣿⣿⡿⠟⠄⠄
+	// ⠠⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄
 	for i, j := 0, len(objectCountResults.Values)-1; i < j; i, j = i+1, j-1 {
 		objectCountResults.Values[i], objectCountResults.Values[j] = objectCountResults.Values[j], objectCountResults.Values[i]
 	}
 
-	graph := asciigraph.Plot(objectCountResults.Values, asciigraph.Width(60), asciigraph.Height(10), asciigraph.Caption("Object Count for past 30 Days"))
-	fmt.Println(graph)
+	for i, j := 0, len(byteCountResults.Values)-1; i < j; i, j = i+1, j-1 {
+		byteCountResults.Values[i], byteCountResults.Values[j] = byteCountResults.Values[j], byteCountResults.Values[i]
+	}
+
+	byteGraph := asciigraph.Plot(byteCountResults.Values, asciigraph.Width(60), asciigraph.Height(10), asciigraph.Caption("(Standard Storage) Byte Count for past 30 Days"))
+	fmt.Println(byteGraph)
+	fmt.Println("")
+	fmt.Println("(standard storage) Approx. bytes currently in bucket:", humanize.Bytes(uint64(bytesInBucket)))
+	fmt.Printf("Metric last updated: %s at %s\n", humanize.Time(bytesLastUpdate.Local()), bytesLastUpdate.Local())
+	fmt.Println("")
+	fmt.Println("==========")
+	fmt.Println("")
+
+	objGraph := asciigraph.Plot(objectCountResults.Values, asciigraph.Width(60), asciigraph.Height(10), asciigraph.Caption("Object Count for past 30 Days"))
+	fmt.Println(objGraph)
 	fmt.Println("")
 	fmt.Println("Approx. objects currently in bucket:", humanize.Comma(int64(objInBucket)))
-	fmt.Printf("Metric last updated: %s at %s\n", humanize.Time(lastUpdate.Local()), lastUpdate.Local())
+	fmt.Printf("Metric last updated: %s at %s\n", humanize.Time(objLastUpdate.Local()), objLastUpdate.Local())
 }
