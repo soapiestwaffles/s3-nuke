@@ -37,6 +37,7 @@ const (
 	DeepArchiveStagingStorage      StorageType = "DeepArchiveStagingStorage"
 )
 
+// Service defines functions related to Cloudwatch operations
 type Service interface {
 	// GetS3ObjectCount returns the amount of objects in an S3 bucket at the time of the last cloudwatch metric for ALL storage types
 	//
@@ -76,7 +77,7 @@ type service struct {
 	region      string
 }
 
-// NewS3Service returns an initialized S3Service
+// NewService returns an initialized S3Service
 func NewService(opts ...ServiceOption) Service {
 	svc := &service{}
 	for _, opt := range opts {
@@ -241,7 +242,7 @@ func (s *service) GetS3ByteCount(ctx context.Context, bucketName string, storage
 
 // =====
 
-// S3API defines the interface for AWS S3 SDK functions
+// CloudwatchAPI defines the interface for AWS S3 SDK functions
 type CloudwatchAPI interface {
 	GetMetricData(ctx context.Context,
 		params *cloudwatch.GetMetricDataInput,

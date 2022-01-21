@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 )
 
+// New creates a new aws.Config with custom endpoint resolver and region set
 func New(region string, awsEndpoint string) (aws.Config, error) {
 	var cfg aws.Config
 	var err error
