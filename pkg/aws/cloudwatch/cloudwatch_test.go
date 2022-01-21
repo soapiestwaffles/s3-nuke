@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/smithy-go/middleware"
+	"github.com/davecgh/go-spew/spew"
 )
 
 type CloudwatchAPIMock struct {
@@ -209,12 +210,102 @@ func Test_service_GetS3ObjectCount(t *testing.T) {
 	}
 }
 
+func Test_service_GetS3ByteCount(t *testing.T) {
+	cloudwatchMock := CloudwatchAPIMock{
+		options: cloudwatch.Options{},
+		t:       t,
+	}
+	cloudwatchMockFail := CloudwatchAPIMockFail{
+		options: cloudwatch.Options{},
+		t:       t,
+	}
+	type fields struct {
+		client      CloudwatchAPI
+		awsEndpoint string
+		region      string
+	}
+	type args struct {
+		ctx           context.Context
+		bucketName    string
+		storageType   StorageType
+		startTimeDiff int
+		period        int32
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    *S3ByteCountResults
+		wantErr bool
+	}{
+		{
+			name: "get bucket objects",
+			fields: fields{
+				client:      cloudwatchMock,
+				awsEndpoint: "",
+				region:      "us-west-2",
+			},
+			args: args{
+				ctx:           context.TODO(),
+				bucketName:    "testbucket",
+				storageType:   StandardStorage,
+				startTimeDiff: 72,
+				period:        60,
+			},
+			want: &S3ByteCountResults{
+				Timestamps: cloudwatchTimestamps,
+				Values: []float64{
+					10.0,
+					20.0,
+					30.0,
+					40.0,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "fail",
+			fields: fields{
+				client:      cloudwatchMockFail,
+				awsEndpoint: "",
+				region:      "us-west-2",
+			},
+			args: args{
+				ctx:           context.TODO(),
+				bucketName:    "failbucket",
+				startTimeDiff: 72,
+				period:        60,
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &service{
+				client:      tt.fields.client,
+				awsEndpoint: tt.fields.awsEndpoint,
+				region:      tt.fields.region,
+			}
+			got, err := s.GetS3ByteCount(tt.args.ctx, tt.args.bucketName, tt.args.storageType, tt.args.startTimeDiff, tt.args.period)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("service.GetS3ObjectCount() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("service.GetS3ObjectCount() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 // =================
 
 func (s CloudwatchAPIMock) GetMetricData(ctx context.Context,
 	params *cloudwatch.GetMetricDataInput,
 	optFns ...func(*cloudwatch.Options)) (*cloudwatch.GetMetricDataOutput, error) {
 
+	s.t.Logf("request metrics: %s", spew.Sdump(params))
 	output := &cloudwatch.GetMetricDataOutput{
 		Messages: []types.MessageData{},
 		MetricDataResults: []types.MetricDataResult{{

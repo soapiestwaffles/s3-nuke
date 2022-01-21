@@ -11,19 +11,58 @@ import (
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/config"
 )
 
+type StorageType string
+
+const (
+	StandardStorage                StorageType = "StandardStorage"
+	IntelligentTieringFAStorage    StorageType = "IntelligentTieringFAStorage"
+	IntelligentTieringIAStorage    StorageType = "IntelligentTieringIAStorage"
+	IntelligentTieringAAStorage    StorageType = "IntelligentTieringAAStorage"
+	IntelligentTieringAIAStorage   StorageType = "IntelligentTieringAIAStorage"
+	IntelligentTieringDAAStorage   StorageType = "IntelligentTieringDAAStorage"
+	StandardIAStorage              StorageType = "StandardIAStorage"
+	StandardIASizeOverhead         StorageType = "StandardIASizeOverhead"
+	StandardIAObjectOverhead       StorageType = "StandardIAObjectOverhead"
+	OneZoneIAStorage               StorageType = "OneZoneIAStorage"
+	OneZoneIASizeOverhead          StorageType = "OneZoneIASizeOverhead"
+	ReducedRedundancyStorage       StorageType = "ReducedRedundancyStorage"
+	GlacierInstantRetrievalStorage StorageType = "GlacierInstantRetrievalStorage"
+	GlacierStorage                 StorageType = "GlacierStorage"
+	GlacierStagingStorage          StorageType = "GlacierStagingStorage"
+	GlacierObjectOverhead          StorageType = "GlacierObjectOverhead"
+	GlacierS3ObjectOverhead        StorageType = "GlacierS3ObjectOverhead"
+	DeepArchiveStorage             StorageType = "DeepArchiveStorage"
+	DeepArchiveObjectOverhead      StorageType = "DeepArchiveObjectOverhead"
+	DeepArchiveS3ObjectOverhead    StorageType = "DeepArchiveS3ObjectOverhead"
+	DeepArchiveStagingStorage      StorageType = "DeepArchiveStagingStorage"
+)
+
 type Service interface {
-	// GetS3ObjectCount returns the current amount of objects in an S3 bucket at the current time from ALL storage types
+	// GetS3ObjectCount returns the amount of objects in an S3 bucket at the time of the last cloudwatch metric for ALL storage types
 	//
 	// time units:
 	//   `startTimeDiff` - hours
 	//   `period`        - seconds
 	GetS3ObjectCount(ctx context.Context, bucketName string, startTimeDiff int, period int32) (*S3ObjectCountResults, error)
+
+	// GetS3ByteCount returns the amount of bytes in an S3 bucket at the time of the last cloudwatch metric for a given storage type
+	//
+	// see StorageType constants for type
+	GetS3ByteCount(ctx context.Context, bucketName string, storageType StorageType, startTimeDiff int, period int32) (*S3ByteCountResults, error)
 }
 
 // S3ObjectCountResults contains the results from GetS3ObjectCount()
 //
 // Timestamps/values are ordered newest first at the 0th index and ordered descending
 type S3ObjectCountResults struct {
+	Timestamps []time.Time
+	Values     []float64
+}
+
+// S3ByteCountResults contains the results from GetS3ByteCount()
+//
+// Timestamps/values are ordered newest first at the 0th index and ordered descending
+type S3ByteCountResults struct {
 	Timestamps []time.Time
 	Values     []float64
 }
@@ -114,6 +153,62 @@ func (s *service) GetS3ObjectCount(ctx context.Context, bucketName string, start
 								{
 									Name:  aws.String("StorageType"),
 									Value: aws.String("AllStorageTypes"),
+								},
+							},
+						},
+						Period: aws.Int32(period),
+						Stat:   aws.String("Average"),
+					},
+				},
+			},
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		// Copy this set of results into our returnValues
+		for _, r := range result.MetricDataResults {
+			returnValues.Values = append(returnValues.Values, r.Values...)
+			returnValues.Timestamps = append(returnValues.Timestamps, r.Timestamps...)
+		}
+
+		// Check if we have another set to load, if not, break the loop
+		if result.NextToken == nil {
+			break
+		}
+		nextToken = result.NextToken
+	}
+
+	return returnValues, nil
+}
+
+func (s *service) GetS3ByteCount(ctx context.Context, bucketName string, storageType StorageType, startTimeDiff int, period int32) (*S3ByteCountResults, error) {
+	returnValues := &S3ByteCountResults{}
+
+	var nextToken *string
+	for {
+		result, err := s.client.GetMetricData(ctx, &cloudwatch.GetMetricDataInput{
+			EndTime:   aws.Time(time.Unix(time.Now().Unix(), 0)),
+			StartTime: aws.Time(time.Unix(time.Now().Add(time.Duration(-startTimeDiff)*time.Hour).Unix(), 0)),
+			NextToken: nextToken,
+			MetricDataQueries: []types.MetricDataQuery{
+				{
+					Id:    aws.String("m1"),
+					Label: aws.String("Number of bytes"),
+					// Period: aws.Int32(int32(period)),
+					MetricStat: &types.MetricStat{
+						Metric: &types.Metric{
+							Namespace:  aws.String("AWS/S3"),
+							MetricName: aws.String("BucketSizeBytes"),
+							Dimensions: []types.Dimension{
+								{
+									Name:  aws.String("BucketName"),
+									Value: aws.String(bucketName),
+								},
+								{
+									Name:  aws.String("StorageType"),
+									Value: aws.String(string(storageType)),
 								},
 							},
 						},
