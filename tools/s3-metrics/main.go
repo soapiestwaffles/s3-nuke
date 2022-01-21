@@ -74,8 +74,8 @@ func main() {
 
 	cloudwatchSvc := cloudwatch.NewService(cloudwatch.WithAWSEndpoint(cli.AWSEndpoint), cloudwatch.WithRegion(bucketRegion))
 
-	// loadingSpinner.Suffix = " fetching bucket metrics..."
-	// loadingSpinner.Start()
+	loadingSpinner.Suffix = " fetching bucket metrics..."
+	loadingSpinner.Start()
 	objectCountResults, err := cloudwatchSvc.GetS3ObjectCount(context.TODO(), selectedBucket, 720, 60)
 	if err != nil {
 		fmt.Println("error:", err)
@@ -87,6 +87,7 @@ func main() {
 		fmt.Println("error:", err)
 		os.Exit(1)
 	}
+	loadingSpinner.Stop()
 
 	if len(objectCountResults.Values) == 0 || len(byteCountResults.Values) == 0 {
 		fmt.Println("")
@@ -130,13 +131,14 @@ func main() {
 		byteCountResults.Values[i], byteCountResults.Values[j] = byteCountResults.Values[j], byteCountResults.Values[i]
 	}
 
-	byteGraph := asciigraph.Plot(byteCountResults.Values, asciigraph.Width(60), asciigraph.Height(10), asciigraph.Caption("(Standard Storage) Byte Count for past 30 Days"))
+	byteGraph := asciigraph.Plot(byteCountResults.Values, asciigraph.Width(60), asciigraph.Height(10), asciigraph.Caption("Byte Count for past 30 Days (Standard Storage)"))
 	fmt.Println(byteGraph)
 	fmt.Println("")
-	fmt.Println("(standard storage) Approx. bytes currently in bucket:", humanize.Bytes(uint64(bytesInBucket)))
+	fmt.Println("Approx. bytes currently in bucket (standard storage):", humanize.Bytes(uint64(bytesInBucket)))
 	fmt.Printf("Metric last updated: %s at %s\n", humanize.Time(bytesLastUpdate.Local()), bytesLastUpdate.Local())
+
 	fmt.Println("")
-	fmt.Println("==========")
+	fmt.Println("")
 	fmt.Println("")
 
 	objGraph := asciigraph.Plot(objectCountResults.Values, asciigraph.Width(60), asciigraph.Height(10), asciigraph.Caption("Object Count for past 30 Days"))
