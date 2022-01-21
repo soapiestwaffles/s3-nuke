@@ -4,13 +4,17 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"time"
 
 	"github.com/alecthomas/kong"
 	"github.com/briandowns/spinner"
+	"github.com/manifoldco/promptui"
+	"github.com/schollz/progressbar/v3"
 	"github.com/soapiestwaffles/s3-nuke/internal/pkg/assets"
 	"github.com/soapiestwaffles/s3-nuke/internal/pkg/ui/tui"
+	"github.com/soapiestwaffles/s3-nuke/pkg/aws/cloudwatch"
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/s3"
 )
 
@@ -59,14 +63,14 @@ func main() {
 	}
 
 	// Get list of buckets
-	spinnerGetBuckets := spinner.New(spinner.CharSets[13], 100*time.Millisecond)
-	spinnerGetBuckets.Suffix = " fetching bucket list..."
-	err := spinnerGetBuckets.Color("blue", "bold")
+	loadingSpinner := spinner.New(spinner.CharSets[13], 100*time.Millisecond)
+	loadingSpinner.Suffix = " fetching bucket list..."
+	err := loadingSpinner.Color("blue", "bold")
 	ctx.FatalIfErrorf(err)
-	spinnerGetBuckets.Start()
+	loadingSpinner.Start()
 	buckets, err := s3svc.GetAllBuckets(context.TODO())
 	ctx.FatalIfErrorf(err)
-	spinnerGetBuckets.Stop()
+	loadingSpinner.Stop()
 
 	// Exit if there are no buckets to nuke
 	if len(buckets) == 0 {
@@ -83,14 +87,76 @@ func main() {
 	}
 	fmt.Println("")
 
+	// autodetect bucket region
+	loadingSpinner.Suffix = " fetching bucket region..."
+	loadingSpinner.Start()
+	bucketRegion, err := s3svc.GetBucektRegion(context.TODO(), selectedBucket)
+	loadingSpinner.Stop()
+	if err != nil {
+		fmt.Println("Error detecting bucket region!", err)
+		os.Exit(1)
+	}
+	fmt.Println("🌎 -> bucket located in", bucketRegion)
+	fmt.Println("")
+
+	// recreate s3svc with bucket's region, create cloudwatch svc
+	s3svc = s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint), s3.WithRegion(bucketRegion))
+	cloudwatchSvc := cloudwatch.NewService(cloudwatch.WithAWSEndpoint(cli.AWSEndpoint), cloudwatch.WithRegion(bucketRegion))
+
+	// Warning message
 	fmt.Println("⚠️   !!! WARNING !!!  ⚠️")
 	fmt.Println("This will destroy all versions of all objects in the selected bucket")
 	fmt.Println("")
+
+	// Confirmation 1
 	if !tui.TypeMatchingPhrase() {
 		fmt.Println("")
 		fmt.Println("Phrase did not match. Exiting!")
 		os.Exit(1)
 	}
 
-	_ = selectedBucket
+	// Confirmation 2
+	prompt := promptui.Prompt{
+		Label:     fmt.Sprintf("[bucket: %s] Are you sure, this operation cannot be undone", selectedBucket),
+		IsConfirm: true,
+	}
+	result, err := prompt.Run()
+	if err != nil || strings.ToLower(result) != "y" {
+		fmt.Println("Command aborted!")
+		return
+	}
+
+	// Fetch bucket metrics for progress bar
+	loadingSpinner.Suffix = " fetching bucket metrics..."
+	loadingSpinner.Start()
+	objectCountResults, _ := cloudwatchSvc.GetS3ObjectCount(context.TODO(), selectedBucket, 720, 60)
+	loadingSpinner.Stop()
+
+	println("")
+
+	var objectCount int64
+	if len(objectCountResults.Values) > 0 {
+		objectCount = int64(objectCountResults.Values[0])
+	} else {
+		objectCount = -1
+	}
+
+	nuke(s3svc, objectCount)
+
+}
+
+// Delete operation w/progress bar
+func nuke(s3svc s3.Service, objectCount int64) {
+	bar := progressbar.Default(objectCount, "deleting objects...")
+	bar.RenderBlank()
+
+	for i := 0; i < 1000; i++ {
+		if i+1 == bar.GetMax() {
+			bar.ChangeMax(bar.GetMax() + 1)
+		}
+		bar.Add(1)
+
+		time.Sleep(time.Millisecond * 25)
+	}
+
 }
