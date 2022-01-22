@@ -29,6 +29,18 @@ type Service interface {
 
 	// GetBucketRegion will return the region of a bucket
 	GetBucektRegion(ctx context.Context, bucketName string) (string, error)
+
+	// ListObjects will return some or all (up to 1,000) of the objects in a bucket with each request.
+	// Objects are returned sorted in an ascending order of the respective key names in the list.
+	// use continuationToken to list the next page of objects. For first call, set continuationToken to nil
+	//
+	// prefix limits the response to keys that begin with the specified prefix. Set to nil if not used.
+	//
+	// returns:
+	// `[]]string`` contains the slice of keys returned by this request
+	// `*string` contains the continuation token, if any
+	// `error` is returned not nil if an error has occured requesting the list
+	ListObjects(ctx context.Context, bucketName string, continuationToken *string, prefix *string) ([]string, *string, error)
 }
 
 // Bucket contains information about an S3 bucket
@@ -164,6 +176,30 @@ func (s *service) GetBucektRegion(ctx context.Context, bucketName string) (strin
 
 }
 
+func (s *service) ListObjects(ctx context.Context, bucketName string, continuationToken *string, prefix *string) ([]string, *string, error) {
+	result, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+		Bucket:            &bucketName,
+		ContinuationToken: continuationToken,
+		MaxKeys:           1000,
+		Prefix:            prefix,
+	})
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	keys := []string{}
+	for _, object := range result.Contents {
+		keys = append(keys, *object.Key)
+	}
+
+	if result.IsTruncated {
+		return keys, result.NextContinuationToken, nil
+	}
+
+	return keys, nil, nil
+}
+
 func newS3Client(region string, awsEndpoint string) *s3.Client {
 	// Initialize AWS S3 Client
 	cfg, err := config.New(region, awsEndpoint)
@@ -197,4 +233,8 @@ type S3API interface {
 	GetBucketLocation(ctx context.Context,
 		params *s3.GetBucketLocationInput,
 		optFns ...func(*s3.Options)) (*s3.GetBucketLocationOutput, error)
+
+	ListObjectsV2(ctx context.Context,
+		params *s3.ListObjectsV2Input,
+		optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
 }

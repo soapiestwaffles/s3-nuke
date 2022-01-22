@@ -4,15 +4,18 @@ import (
 	"context"
 	"errors"
 	"io"
+	"math/rand"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/middleware"
+	"github.com/google/uuid"
 )
 
 type S3APIMock struct {
@@ -358,6 +361,132 @@ func Test_service_GetBucektRegion(t *testing.T) {
 	}
 }
 
+func Test_service_ListObjects(t *testing.T) {
+	s3Mock := S3APIMock{
+		options: s3.Options{},
+		t:       t,
+	}
+	s3MockFail := S3APIMockFail{
+		options: s3.Options{},
+		t:       t,
+	}
+
+	finalToken := "third-token"
+	thirdToken := "second-token"
+
+	type fields struct {
+		client      S3API
+		awsEndpoint string
+		region      string
+	}
+	type args struct {
+		ctx               context.Context
+		bucketName        string
+		continuationToken *string
+		prefix            *string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    []string
+		want1   *string
+		wantErr bool
+	}{
+		{
+			name: "list objects",
+			fields: fields{
+				client:      s3Mock,
+				awsEndpoint: "",
+				region:      "us-west-2",
+			},
+			args: args{
+				ctx:               context.TODO(),
+				bucketName:        "testbucket",
+				continuationToken: nil,
+			},
+			wantErr: false,
+		},
+		{
+			name: "fail",
+			fields: fields{
+				client:      s3MockFail,
+				awsEndpoint: "",
+				region:      "us-west-2",
+			},
+			args: args{
+				ctx:               context.TODO(),
+				bucketName:        "testbucket",
+				continuationToken: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "list objects with final token",
+			fields: fields{
+				client:      s3Mock,
+				awsEndpoint: "",
+				region:      "us-west-2",
+			},
+			args: args{
+				ctx:               context.TODO(),
+				bucketName:        "testbucket",
+				continuationToken: &finalToken,
+			},
+			wantErr: false,
+		},
+		{
+			name: "list objects with third token",
+			fields: fields{
+				client:      s3Mock,
+				awsEndpoint: "",
+				region:      "us-west-2",
+			},
+			args: args{
+				ctx:               context.TODO(),
+				bucketName:        "testbucket",
+				continuationToken: &thirdToken,
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &service{
+				client:      tt.fields.client,
+				awsEndpoint: tt.fields.awsEndpoint,
+				region:      tt.fields.region,
+			}
+			continuationToken := tt.args.continuationToken
+			for {
+				keys, token, err := s.ListObjects(tt.args.ctx, tt.args.bucketName, continuationToken, tt.args.prefix)
+				t.Logf("service.ListObjects() returned num keys %d, token %v", len(keys), token)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("service.ListObjects() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+				if tt.wantErr {
+					break
+				}
+				if continuationToken == nil && token == nil {
+					t.Errorf("service.ListObjects() error, wanted continationToken but got nil")
+					return
+				}
+				if len(keys) < 1 {
+					t.Errorf("service.ListObjects() error, keys is empty")
+					return
+				}
+
+				if token != nil {
+					continuationToken = token
+				} else {
+					break
+				}
+			}
+		})
+	}
+}
+
 // =================
 
 func (s S3APIMock) ListBuckets(ctx context.Context,
@@ -490,4 +619,72 @@ func (s S3APIMockFail) GetBucketLocation(ctx context.Context,
 
 	return nil, errors.New("simulated error case")
 
+}
+
+func (s S3APIMock) ListObjectsV2(ctx context.Context,
+	params *s3.ListObjectsV2Input,
+	optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error) {
+
+	rand.Seed(time.Now().Unix())
+
+	if params.ContinuationToken != nil {
+		s.t.Logf("list objects: bucket [%s] continuationToken [%s]", *params.Bucket, *params.ContinuationToken)
+	} else {
+		s.t.Logf("list objects: bucket [%s]", *params.Bucket)
+	}
+
+	returnValue := s3.ListObjectsV2Output{
+		CommonPrefixes:    []types.CommonPrefix{},
+		Contents:          []types.Object{},
+		ContinuationToken: params.ContinuationToken,
+		// Delimiter:         new(string),
+		EncodingType: "",
+		// IsTruncated:       false,
+		MaxKeys: params.MaxKeys,
+		Name:    params.Bucket,
+		Prefix:  new(string),
+	}
+
+	if params.ContinuationToken == nil {
+		// first call
+		returnValue.NextContinuationToken = aws.String("first-token")
+		returnValue.IsTruncated = true
+	} else {
+		switch *params.ContinuationToken {
+		case "first-token":
+			returnValue.NextContinuationToken = aws.String("second-token")
+			returnValue.IsTruncated = true
+		case "second-token":
+			returnValue.NextContinuationToken = aws.String("third-token")
+			returnValue.IsTruncated = true
+		default:
+			returnValue.NextContinuationToken = nil
+			returnValue.IsTruncated = false
+		}
+	}
+
+	itemCount := rand.Intn(500) + 1
+	lastModified := time.Now()
+	for i := 0; i < itemCount; i++ {
+		returnValue.Contents = append(returnValue.Contents, types.Object{
+			ETag:         aws.String(uuid.NewString()),
+			Key:          aws.String(uuid.NewString()),
+			LastModified: &lastModified,
+			Owner:        &types.Owner{},
+			Size:         rand.Int63n(1000000),
+			StorageClass: "StandardStorage",
+		})
+	}
+	returnValue.KeyCount = int32(itemCount)
+
+	return &returnValue, nil
+}
+
+func (s S3APIMockFail) ListObjectsV2(ctx context.Context,
+	params *s3.ListObjectsV2Input,
+	optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error) {
+
+	s.t.Logf("get bucket location [%s]", *params.Bucket)
+
+	return nil, errors.New("simulated error case")
 }
