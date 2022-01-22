@@ -48,8 +48,15 @@ type Service interface {
 	// `[]ObjectVersion` contains object version information
 	// `*string` contains the keyMarker which marks the last key returned in a truncated response
 	// `*string` contains the versionIDMarker which marks the last version of the key returned in a truncated response
-	// `error` is returned no nil if an error has occured requesting the object version list
+	// `error` is returned not nil if an error has occured requesting the object version list
 	ListObjectVersions(ctx context.Context, bucketName string, keyMarker *string, versionIDMarker *string, prefix *string) ([]ObjectVersion, *string, *string, error)
+
+	// DeleteObjects will bulk delete up to 1000 objects in one call
+	//
+	// returns:
+	// `[]ObjectIdentifier` contains list of objects deleted
+	// `error` is returned not nil if an error has occured requesting the object deletion
+	DeleteObjects(ctx context.Context, bucketName string, objects []ObjectIdentifier) ([]ObjectIdentifier, error)
 }
 
 // Bucket contains information about an S3 bucket
@@ -59,9 +66,13 @@ type Bucket struct {
 }
 
 type ObjectVersion struct {
-	Key            *string
-	VersionID      *string
+	ObjectIdentifier
 	IsDeleteMarker bool
+}
+
+type ObjectIdentifier struct {
+	Key       *string
+	VersionID *string
 }
 
 // ServiceOption is used with NewS3Service and configures the newly created s3Service
@@ -230,21 +241,56 @@ func (s *service) ListObjectVersions(ctx context.Context, bucketName string, key
 	versions := []ObjectVersion{}
 	for _, version := range result.Versions {
 		versions = append(versions, ObjectVersion{
-			Key:            version.Key,
-			VersionID:      version.VersionId,
+			ObjectIdentifier: ObjectIdentifier{
+				Key:       version.Key,
+				VersionID: version.VersionId,
+			},
 			IsDeleteMarker: false,
 		})
 	}
 
 	for _, deleteMarker := range result.DeleteMarkers {
 		versions = append(versions, ObjectVersion{
-			Key:            deleteMarker.Key,
-			VersionID:      deleteMarker.VersionId,
+			ObjectIdentifier: ObjectIdentifier{
+				Key:       deleteMarker.Key,
+				VersionID: deleteMarker.VersionId,
+			},
 			IsDeleteMarker: true,
 		})
 	}
 
 	return versions, result.NextKeyMarker, result.NextVersionIdMarker, nil
+}
+
+func (s *service) DeleteObjects(ctx context.Context, bucketName string, objects []ObjectIdentifier) ([]ObjectIdentifier, error) {
+	deleteObjects := []types.ObjectIdentifier{}
+	for _, object := range objects {
+		deleteObjects = append(deleteObjects, types.ObjectIdentifier{
+			Key:       object.Key,
+			VersionId: object.VersionID,
+		})
+	}
+
+	result, err := s.client.DeleteObjects(ctx, &s3.DeleteObjectsInput{
+		Bucket: &bucketName,
+		Delete: &types.Delete{
+			Objects: deleteObjects,
+			Quiet:   false,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	returnValue := []ObjectIdentifier{}
+	for _, object := range result.Deleted {
+		returnValue = append(returnValue, ObjectIdentifier{
+			Key:       object.Key,
+			VersionID: object.VersionId,
+		})
+	}
+
+	return returnValue, nil
 }
 
 func newS3Client(region string, awsEndpoint string) *s3.Client {
@@ -288,4 +334,8 @@ type S3API interface {
 	ListObjectVersions(ctx context.Context,
 		params *s3.ListObjectVersionsInput,
 		optFns ...func(*s3.Options)) (*s3.ListObjectVersionsOutput, error)
+
+	DeleteObjects(ctx context.Context,
+		params *s3.DeleteObjectsInput,
+		optFns ...func(*s3.Options)) (*s3.DeleteObjectsOutput, error)
 }

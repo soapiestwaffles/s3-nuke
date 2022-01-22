@@ -1,3 +1,5 @@
+github.com/Avalanche-io/counter v0.0.0-20180124180526-1336089e985a h1:bwEVA3vzs75izeVVNVb6mrTLJ/+YQ/A0xdE81ARqMtM=
+github.com/Avalanche-io/counter v0.0.0-20180124180526-1336089e985a/go.mod h1:59fvWaLUx1q3l138qZU4gef/lImGLMgTdG/ENhVxhBo=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/alecthomas/kong v0.2.22 h1:lRcQYT2/yJ+coDNA5ws0mRL0pwSqjbP/6AcRkyKhomk=
 github.com/alecthomas/kong v0.2.22/go.mod h1:uzxf/HUh0tj43x1AyJROl3JT7SgsZ5m+icOv1csRhc0=

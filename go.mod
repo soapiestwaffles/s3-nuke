@@ -16,6 +16,7 @@ require (
 )
 
 require (
+	github.com/Avalanche-io/counter v0.0.0-20180124180526-1336089e985a // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.0.0 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.6.5 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.8.2 // indirect

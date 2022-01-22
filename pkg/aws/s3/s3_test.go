@@ -913,3 +913,39 @@ func (s S3APIMockFail) ListObjectVersions(ctx context.Context,
 
 	return nil, errors.New("simulated error case")
 }
+
+func (s S3APIMock) DeleteObjects(ctx context.Context,
+	params *s3.DeleteObjectsInput,
+	optFns ...func(*s3.Options)) (*s3.DeleteObjectsOutput, error) {
+	rand.Seed(time.Now().UnixNano())
+
+	s.t.Logf("delete objects bucket [%s], num objects [%d]", *params.Bucket, len(params.Delete.Objects))
+
+	returnValue := s3.DeleteObjectsOutput{
+		Deleted:        []types.DeletedObject{},
+		Errors:         []types.Error{},
+		RequestCharged: "",
+		ResultMetadata: middleware.Metadata{},
+	}
+
+	for _, object := range params.Delete.Objects {
+		returnValue.Deleted = append(returnValue.Deleted, types.DeletedObject{
+			DeleteMarker:          rand.Uint64()&(1<<63) == 0,
+			DeleteMarkerVersionId: aws.String(uuid.NewString()),
+			Key:                   object.Key,
+			VersionId:             object.VersionId,
+		})
+	}
+
+	return &returnValue, nil
+
+}
+
+func (s S3APIMockFail) DeleteObjects(ctx context.Context,
+	params *s3.DeleteObjectsInput,
+	optFns ...func(*s3.Options)) (*s3.DeleteObjectsOutput, error) {
+
+	s.t.Logf("delete objects bucket [%s], num objects [%d]", *params.Bucket, len(params.Delete.Objects))
+
+	return nil, errors.New("simulated error case")
+}
