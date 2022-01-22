@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"time"
 
@@ -141,7 +143,7 @@ func main() {
 		objectCount = -1
 	}
 
-	err = nuke(s3svc, objectCount)
+	err = nuke(s3svc, selectedBucket, objectCount)
 	if err != nil {
 		fmt.Println("error:", err)
 		os.Exit(1)
@@ -150,21 +152,75 @@ func main() {
 }
 
 // Delete operation w/progress bar
-func nuke(s3svc s3.Service, objectCount int64) error {
+func nuke(s3svc s3.Service, bucket string, objectCount int64) error {
 	bar := progressbar.Default(objectCount, "deleting objects...")
 	err := bar.RenderBlank()
 	if err != nil {
 		return err
 	}
 
-	for i := 0; i < 1000; i++ {
-		if i+1 == bar.GetMax() {
-			bar.ChangeMax(bar.GetMax() + 1)
+	var wg sync.WaitGroup
+
+	s3ListQueue := make(chan string, 100000)
+	s3VersionListQueue := make(chan s3.ObjectVersion, 100000)
+
+	// Get top level objects
+	wg.Add(1)
+	go func() {
+		var continuationToken *string
+		for {
+			objects, token, err := s3svc.ListObjects(context.Background(), bucket, continuationToken, nil)
+			if err != nil {
+				fmt.Println("error:", err)
+				os.Exit(1)
+			}
+
+			for _, object := range objects {
+				s3ListQueue <- object
+			}
+
+			if token == nil {
+				break
+			}
+			continuationToken = token
 		}
-		_ = bar.Add(1)
+		wg.Done()
+	}()
 
-		time.Sleep(time.Millisecond * 25)
-	}
+	// Get object versions
+	wg.Add(1)
+	go func() {
+		var keyMarkerToken, versionMarkerToken *string
+		log.Println("begin get versions")
+		for {
+			objectVersions, keyMarker, versionMarker, err := s3svc.ListObjectVersions(context.Background(), bucket, keyMarkerToken, versionMarkerToken, nil)
+			if err != nil {
+				fmt.Println("error:", err)
+				os.Exit(1)
+			}
 
+			for _, version := range objectVersions {
+				s3VersionListQueue <- version
+			}
+
+			if keyMarker == nil && versionMarker == nil {
+				break
+			}
+			keyMarkerToken = keyMarker
+			versionMarkerToken = versionMarker
+		}
+		wg.Done()
+	}()
+
+	// for i := 0; i < 1000; i++ {
+	// 	if i+1 == bar.GetMax() {
+	// 		bar.ChangeMax(bar.GetMax() + 1)
+	// 	}
+	// 	_ = bar.Add(1)
+
+	// 	time.Sleep(time.Millisecond * 25)
+	// }
+
+	wg.Wait()
 	return nil
 }
