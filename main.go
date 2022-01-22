@@ -141,22 +141,30 @@ func main() {
 		objectCount = -1
 	}
 
-	nuke(s3svc, objectCount)
+	err = nuke(s3svc, objectCount)
+	if err != nil {
+		fmt.Println("error:", err)
+		os.Exit(1)
+	}
 
 }
 
 // Delete operation w/progress bar
-func nuke(s3svc s3.Service, objectCount int64) {
+func nuke(s3svc s3.Service, objectCount int64) error {
 	bar := progressbar.Default(objectCount, "deleting objects...")
-	bar.RenderBlank()
+	err := bar.RenderBlank()
+	if err != nil {
+		return err
+	}
 
 	for i := 0; i < 1000; i++ {
 		if i+1 == bar.GetMax() {
 			bar.ChangeMax(bar.GetMax() + 1)
 		}
-		bar.Add(1)
+		_ = bar.Add(1)
 
 		time.Sleep(time.Millisecond * 25)
 	}
 
+	return nil
 }
