@@ -37,16 +37,31 @@ type Service interface {
 	// prefix limits the response to keys that begin with the specified prefix. Set to nil if not used.
 	//
 	// returns:
-	// `[]]string`` contains the slice of keys returned by this request
+	// `[]string`` contains the slice of keys returned by this request
 	// `*string` contains the continuation token, if any
 	// `error` is returned not nil if an error has occured requesting the list
 	ListObjects(ctx context.Context, bucketName string, continuationToken *string, prefix *string) ([]string, *string, error)
+
+	// ListObjectVersions will return version information
+	//
+	// returns:
+	// `[]ObjectVersion` contains object version information
+	// `*string` contains the keyMarker which marks the last key returned in a truncated response
+	// `*string` contains the versionIDMarker which marks the last version of the key returned in a truncated response
+	// `error` is returned no nil if an error has occured requesting the object version list
+	ListObjectVersions(ctx context.Context, bucketName string, keyMarker *string, versionIDMarker *string, prefix *string) ([]ObjectVersion, *string, *string, error)
 }
 
 // Bucket contains information about an S3 bucket
 type Bucket struct {
 	CreationDate *time.Time
 	Name         *string
+}
+
+type ObjectVersion struct {
+	Key            *string
+	VersionID      *string
+	IsDeleteMarker bool
 }
 
 // ServiceOption is used with NewS3Service and configures the newly created s3Service
@@ -200,6 +215,38 @@ func (s *service) ListObjects(ctx context.Context, bucketName string, continuati
 	return keys, nil, nil
 }
 
+func (s *service) ListObjectVersions(ctx context.Context, bucketName string, keyMarker *string, versionIDMarker *string, prefix *string) ([]ObjectVersion, *string, *string, error) {
+	result, err := s.client.ListObjectVersions(ctx, &s3.ListObjectVersionsInput{
+		Bucket:          &bucketName,
+		KeyMarker:       keyMarker,
+		MaxKeys:         1000,
+		Prefix:          prefix,
+		VersionIdMarker: versionIDMarker,
+	})
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	versions := []ObjectVersion{}
+	for _, version := range result.Versions {
+		versions = append(versions, ObjectVersion{
+			Key:            version.Key,
+			VersionID:      version.VersionId,
+			IsDeleteMarker: false,
+		})
+	}
+
+	for _, deleteMarker := range result.DeleteMarkers {
+		versions = append(versions, ObjectVersion{
+			Key:            deleteMarker.Key,
+			VersionID:      deleteMarker.VersionId,
+			IsDeleteMarker: true,
+		})
+	}
+
+	return versions, result.NextKeyMarker, result.NextVersionIdMarker, nil
+}
+
 func newS3Client(region string, awsEndpoint string) *s3.Client {
 	// Initialize AWS S3 Client
 	cfg, err := config.New(region, awsEndpoint)
@@ -237,4 +284,8 @@ type S3API interface {
 	ListObjectsV2(ctx context.Context,
 		params *s3.ListObjectsV2Input,
 		optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
+
+	ListObjectVersions(ctx context.Context,
+		params *s3.ListObjectVersionsInput,
+		optFns ...func(*s3.Options)) (*s3.ListObjectVersionsOutput, error)
 }
