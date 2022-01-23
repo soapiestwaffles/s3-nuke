@@ -34,7 +34,7 @@ var (
 		// Debug       bool   `help:"enable debug mode"`
 		Version     bool   `help:"display version information" optional:""`
 		AWSEndpoint string `help:"override AWS endpoint address" short:"e" optional:"" env:"AWS_ENDPOINT"`
-		Region      string `help:"override AWS region" optional:"" env:"AWS_REGION"`
+		Region      string `help:"override AWS region" optional:"" default:"us-east-1" env:"AWS_REGION"`
 		Concurrency int    `help:"amount of concurrency used during delete operations" optional:"" default:"300"`
 	}
 )
@@ -43,6 +43,10 @@ func main() {
 	ctx := kong.Parse(&cli,
 		kong.Name("s3-nuke"),
 		kong.Description("Quickly destroy all objects and versions in an AWS S3 bucket."))
+
+	if _, regionEnv := os.LookupEnv("AWS_REGION"); !regionEnv {
+		os.Setenv("AWS_REGION", cli.Region)
+	}
 
 	fmt.Println(assets.Logo)
 
@@ -101,12 +105,24 @@ func main() {
 		fmt.Println("Error detecting bucket region!", err)
 		os.Exit(1)
 	}
-	fmt.Println("🌎 -> bucket located in", bucketRegion)
+	fmt.Println("🌎 bucket located in", bucketRegion)
 	fmt.Println("")
 
 	// recreate s3svc with bucket's region, create cloudwatch svc
 	s3svc = s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint), s3.WithRegion(bucketRegion))
 	cloudwatchSvc := cloudwatch.NewService(cloudwatch.WithAWSEndpoint(cli.AWSEndpoint), cloudwatch.WithRegion(bucketRegion))
+
+	// Fetch bucket metrics
+	loadingSpinner.Suffix = " fetching bucket metrics..."
+	loadingSpinner.Start()
+	objectCountResults, _ := cloudwatchSvc.GetS3ObjectCount(context.TODO(), selectedBucket, 720, 60)
+	loadingSpinner.Stop()
+
+	if len(objectCountResults.Values) > 0 {
+		fmt.Printf("Bucket object count: %s\n", humanize.Comma(int64(objectCountResults.Values[0])))
+		fmt.Printf("(object count metric last updated %s @ %s)\n", humanize.Time(objectCountResults.Timestamps[0].Local()), objectCountResults.Timestamps[0].Local())
+		fmt.Println("")
+	}
 
 	// Warning message
 	fmt.Println("⚠️   !!! WARNING !!!  ⚠️")
@@ -131,22 +147,9 @@ func main() {
 		return
 	}
 
-	// Fetch bucket metrics for progress bar
-	loadingSpinner.Suffix = " fetching bucket metrics..."
-	loadingSpinner.Start()
-	objectCountResults, _ := cloudwatchSvc.GetS3ObjectCount(context.TODO(), selectedBucket, 720, 60)
-	loadingSpinner.Stop()
-
 	println("")
 
-	var objectCount int64
-	if len(objectCountResults.Values) > 0 {
-		objectCount = int64(objectCountResults.Values[0])
-	} else {
-		objectCount = -1
-	}
-
-	err = nuke(s3svc, selectedBucket, cli.Concurrency, objectCount)
+	err = nuke(s3svc, selectedBucket, cli.Concurrency)
 	if err != nil {
 		fmt.Println("error:", err)
 		os.Exit(1)
@@ -155,11 +158,8 @@ func main() {
 }
 
 // Delete operation w/progress bar
-func nuke(s3svc s3.Service, bucket string, concurrency int, objectCount int64) error {
+func nuke(s3svc s3.Service, bucket string, concurrency int) error {
 	fmt.Println("")
-	if objectCount > 0 {
-		fmt.Println("Approximate objects to delete:", humanize.Comma(objectCount))
-	}
 
 	c := counter.New()
 	bar := progressbar.Default(-1, "deleting objects...")
