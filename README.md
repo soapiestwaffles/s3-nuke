@@ -122,6 +122,20 @@ Flags:
       --yes                      bypass user prompt and proceed with action automatically
 ```
 
+#### Example output
+
+```console
+$ go run tools/s3-gen/main.go --num-buckets=3 --num-objects=1000 --num-versions=10 --region="us-west-2"
+=== RANDOM BUCKET GENERATOR ===
+
+? Create resources [3 bucket(s)]/[1000 object(s)]/[10 version(s)]? [y/N] y█
+
+create buckets     0s [=====================>----------------------------------------------]  33%
+create objects     0s [--------------------------------------------------------------------]   0%
+create versions    0s [====================================================================] 100%
+```
+
+
 ## Building
 
 ### Requirements
