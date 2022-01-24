@@ -9,7 +9,7 @@ Nuke all the files and all versions from an S3 Bucket rapidly by utilizing both 
   * By utilizing concurrency and bulk API calls, s3-nuke is fast at what it does!
   * Auto-detect S3 bucket region -- no need to figure out what region the bucket is in before hand!
   * Text-based UI makes it easy to select your target bucket!
-  * S3-Nuke includes saftey prompts to ensure you _REALLY_ want to nuke everything in a bucket! After all, the operation is not reversable since you are removing all the object versions as well!
+  * S3-Nuke includes safety prompts to ensure you _REALLY_ want to nuke everything in a bucket! After all, the operation is not reversable since you are removing all the object versions as well!
   * Includes extra tooling to give you a quick look at bucket metrics (`s3-metrics`) or generate test buckets with data (`s3-gen`)
 ### Why?
 _...because deleting any bucket with files is just plain annoying._
