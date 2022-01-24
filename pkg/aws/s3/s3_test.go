@@ -632,6 +632,112 @@ func Test_service_ListObjectVersions(t *testing.T) {
 	}
 }
 
+func Test_service_DeleteObjects(t *testing.T) {
+	s3Mock := S3APIMock{
+		options: s3.Options{},
+		t:       t,
+	}
+	s3MockFail := S3APIMockFail{
+		options: s3.Options{},
+		t:       t,
+	}
+
+	type fields struct {
+		client      S3API
+		awsEndpoint string
+		region      string
+	}
+	type args struct {
+		ctx        context.Context
+		bucketName string
+		objects    []ObjectIdentifier
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "delete objects",
+			fields: fields{
+				client:      s3Mock,
+				awsEndpoint: "",
+				region:      "us-west-2",
+			},
+			args: args{
+				ctx:        context.TODO(),
+				bucketName: "testbucket",
+				objects: []ObjectIdentifier{
+					{
+						Key:       aws.String("file1"),
+						VersionID: aws.String("version1"),
+					},
+					{
+						Key:       aws.String("file2"),
+						VersionID: aws.String("version2"),
+					},
+					{
+						Key:       aws.String("file2"),
+						VersionID: aws.String("version2"),
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "delete objects with failure",
+			fields: fields{
+				client:      s3MockFail,
+				awsEndpoint: "",
+				region:      "us-west-2",
+			},
+			args: args{
+				ctx:        context.TODO(),
+				bucketName: "testbucket",
+				objects: []ObjectIdentifier{
+					{
+						Key:       aws.String("file1"),
+						VersionID: aws.String("version1"),
+					},
+					{
+						Key:       aws.String("file2"),
+						VersionID: aws.String("version2"),
+					},
+					{
+						Key:       aws.String("file2"),
+						VersionID: aws.String("version2"),
+					},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &service{
+				client:      tt.fields.client,
+				awsEndpoint: tt.fields.awsEndpoint,
+				region:      tt.fields.region,
+			}
+			got, err := s.DeleteObjects(tt.args.ctx, tt.args.bucketName, tt.args.objects)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("service.DeleteObjects() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr {
+				if len(got) > 0 {
+					t.Errorf("service.DeleteObjects() error, wanted error with zero results, instead returned %d results", len(got))
+				}
+				return
+			}
+			if !reflect.DeepEqual(got, tt.args.objects) {
+				t.Errorf("service.DeleteObjects() = %v, want %v", got, tt.args.objects)
+			}
+		})
+	}
+}
+
 // =================
 
 func (s S3APIMock) ListBuckets(ctx context.Context,
