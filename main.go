@@ -35,7 +35,7 @@ var (
 		Version     bool   `help:"display version information" optional:""`
 		AWSEndpoint string `help:"override AWS endpoint address" short:"e" optional:"" env:"AWS_ENDPOINT"`
 		Region      string `help:"override AWS region" optional:"" default:"us-east-1" env:"AWS_REGION"`
-		Concurrency int    `help:"amount of concurrency used during delete operations" optional:"" default:"300"`
+		Concurrency int    `help:"amount of concurrency used during delete operations" optional:"" default:"100"`
 	}
 )
 
