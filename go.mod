@@ -3,6 +3,7 @@ module github.com/soapiestwaffles/s3-nuke
 go 1.17
 
 require (
+	github.com/Avalanche-io/counter v0.0.0-20180124180526-1336089e985a
 	github.com/alecthomas/kong v0.2.22
 	github.com/aws/aws-sdk-go-v2 v1.13.0
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.15.0
@@ -16,7 +17,6 @@ require (
 )
 
 require (
-	github.com/Avalanche-io/counter v0.0.0-20180124180526-1336089e985a // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.0.0 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.6.5 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.8.2 // indirect
