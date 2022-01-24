@@ -185,11 +185,11 @@ Flags:
 $ go run tools/s3-gen/main.go --num-buckets=3 --num-objects=1000 --num-versions=10 --region="us-west-2"
 === RANDOM BUCKET GENERATOR ===
 
-? Create resources [3 bucket(s)]/[1000 object(s)]/[10 version(s)]? [y/N] y█
+Create resources [1 bucket(s)]/[300 object(s)]/[10 version(s)]: y
 
-create buckets     0s [=====================>----------------------------------------------]  33%
-create objects     0s [--------------------------------------------------------------------]   0%
-create versions    0s [====================================================================] 100%
+create buckets     0s [====================================================================] 100%
+create objects    16s [===>----------------------------------------------------------------]   8%
+create versions   16s [========================================>---------------------------]  60%
 ```
 
 
