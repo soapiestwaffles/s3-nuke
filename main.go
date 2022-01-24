@@ -56,7 +56,7 @@ func main() {
 		fmt.Println("")
 		fmt.Println("version....:", version)
 		fmt.Println("commit.....:", commit)
-		fmt.Println("data.......:", date)
+		fmt.Println("date.......:", date)
 		os.Exit(0)
 	}
 
