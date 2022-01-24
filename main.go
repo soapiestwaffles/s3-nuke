@@ -22,7 +22,7 @@ import (
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/s3"
 )
 
-const releaseURL = "https://github.com/soapiestwaffles/s3-nuke/release"
+const releaseURL = "https://github.com/soapiestwaffles/s3-nuke/releases"
 
 var (
 	version = "dev"
@@ -52,7 +52,7 @@ func main() {
 
 	//  Show version information and exit
 	if cli.Version {
-		fmt.Println("Find releases at", releaseURL)
+		fmt.Println("Find new releases at", releaseURL)
 		fmt.Println("")
 		fmt.Println("version....:", version)
 		fmt.Println("commit.....:", commit)
