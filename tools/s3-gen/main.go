@@ -111,7 +111,7 @@ func main() {
 				if err != nil {
 					fmt.Printf("UI error occurred: %s", err.Error())
 				}
-				for iv := 1; iv < cli.NumObjects; iv++ {
+				for iv := 1; iv < cli.NumVersions; iv++ {
 					r = strings.NewReader(generators.GeneratePhrase(20))
 					_, _, err := s3.PutObjectSimple(context.TODO(), bucketName, key, r)
 					if err != nil {
