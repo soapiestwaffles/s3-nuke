@@ -14,6 +14,7 @@ import (
 // StorageType defines the name of an S3 storage class
 type StorageType string
 
+// Possible S3 storage types
 const (
 	StandardStorage                StorageType = "StandardStorage"
 	IntelligentTieringFAStorage    StorageType = "IntelligentTieringFAStorage"

@@ -39,7 +39,7 @@ type Service interface {
 	// returns:
 	// `[]string`` contains the slice of keys returned by this request
 	// `*string` contains the continuation token, if any
-	// `error` is returned not nil if an error has occured requesting the list
+	// `error` is returned not nil if an error has occurred requesting the list
 	ListObjects(ctx context.Context, bucketName string, continuationToken *string, prefix *string) ([]string, *string, error)
 
 	// ListObjectVersions will return version information
@@ -48,14 +48,14 @@ type Service interface {
 	// `[]ObjectVersion` contains object version information
 	// `*string` contains the keyMarker which marks the last key returned in a truncated response
 	// `*string` contains the versionIDMarker which marks the last version of the key returned in a truncated response
-	// `error` is returned not nil if an error has occured requesting the object version list
+	// `error` is returned not nil if an error has occurred requesting the object version list
 	ListObjectVersions(ctx context.Context, bucketName string, keyMarker *string, versionIDMarker *string, prefix *string) ([]ObjectVersion, *string, *string, error)
 
 	// DeleteObjects will bulk delete up to 1000 objects in one call
 	//
 	// returns:
 	// `[]ObjectIdentifier` contains list of objects deleted
-	// `error` is returned not nil if an error has occured requesting the object deletion
+	// `error` is returned not nil if an error has occurred requesting the object deletion
 	DeleteObjects(ctx context.Context, bucketName string, objects []ObjectIdentifier) ([]ObjectIdentifier, error)
 }
 
@@ -65,11 +65,13 @@ type Bucket struct {
 	Name         *string
 }
 
+// ObjectVersion defines an object and version information from an S3 bucket
 type ObjectVersion struct {
 	ObjectIdentifier
 	IsDeleteMarker bool
 }
 
+// ObjectIdentifier is used to identify a specific S3 object and version
 type ObjectIdentifier struct {
 	Key       *string
 	VersionID *string
