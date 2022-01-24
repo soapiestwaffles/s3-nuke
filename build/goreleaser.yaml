@@ -4,16 +4,57 @@ before:
     - go mod tidy
 #    - go generate ./...
 builds:
-  - env:
+  - id: "s3-nuke"
+    main: "./main.go"
+    binary: "s3-nuke"
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
       - windows
       - darwin
+    ignore:
+      - goos: darwin
+        goarch: "386"
+      - goos: windows
+        goarch: "386"
+  - id: "s3-metrics"
+    main: "./tools/s3-metrics/main.go"
+    binary: "s3-metrics"
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    ignore:
+      - goos: darwin
+        goarch: "386"
+      - goos: windows
+        goarch: "386"
     # ldflags:
     #   - -s -w -X main.build={{.Summary}}
 archives:
-  - replacements:
+  - id: "s3-nuke"
+    builds:
+      - "s3-nuke"
+    replacements:
+      # darwin: Darwin
+      # linux: Linux
+      # windows: Windows
+      386: i386
+      # amd64: x86_64
+    wrap_in_directory: "true"
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE
+  - id: "s3-metrics"
+    builds:
+      - "s3-metrics"
+    name_template: "s3-metrics_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    replacements:
       # darwin: Darwin
       # linux: Linux
       # windows: Windows
@@ -35,3 +76,10 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+release:
+  ids:
+    - "s3-nuke"
+    - "s3-metrics"
+  draft: true
+  prerelease: auto
+  mode: append
