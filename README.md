@@ -11,6 +11,9 @@ Nuke all the files and all versions from an S3 Bucket rapidly by utilizing both 
   * Text-based UI makes it easy to select your target bucket!
   * S3-Nuke includes safety prompts to ensure you _REALLY_ want to nuke everything in a bucket! After all, the operation is not reversible  since you are removing all the object versions as well!
   * Includes extra tooling to give you a quick look at bucket metrics (`s3-metrics`) or generate test buckets with data (`s3-gen`)
+
+![usage demo](https://raw.githubusercontent.com/soapiestwaffles/_assets/master/s3-nuke/s3-nuke.svg)
+
 ### Why?
 _...because deleting any bucket with files is just plain annoying._
 
