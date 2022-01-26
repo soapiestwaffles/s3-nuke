@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+
 	"math/rand"
 	"reflect"
 	"strings"
@@ -16,6 +17,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 type S3APIMock struct {
@@ -70,6 +73,7 @@ func TestNewService(t *testing.T) {
 }
 
 func Test_s3Service_GetAllBuckets(t *testing.T) {
+	log.Logger = log.Output(zerolog.TestWriter{T: t})
 	t.Run("successful", func(t *testing.T) {
 		s3 := NewService(WithS3API(&S3APIMock{options: s3.Options{}}))
 
@@ -287,6 +291,7 @@ func Test_s3Service_PutObjectSimple(t *testing.T) {
 }
 
 func Test_service_GetBucektRegion(t *testing.T) {
+	log.Logger = log.Output(zerolog.TestWriter{T: t})
 	s3Mock := S3APIMock{
 		options: s3.Options{},
 		t:       t,
@@ -362,6 +367,7 @@ func Test_service_GetBucektRegion(t *testing.T) {
 }
 
 func Test_service_ListObjects(t *testing.T) {
+	log.Logger = log.Output(zerolog.TestWriter{T: t})
 	s3Mock := S3APIMock{
 		options: s3.Options{},
 		t:       t,
@@ -488,6 +494,7 @@ func Test_service_ListObjects(t *testing.T) {
 }
 
 func Test_service_ListObjectVersions(t *testing.T) {
+	log.Logger = log.Output(zerolog.TestWriter{T: t})
 	s3Mock := S3APIMock{
 		options: s3.Options{},
 		t:       t,
@@ -633,6 +640,7 @@ func Test_service_ListObjectVersions(t *testing.T) {
 }
 
 func Test_service_DeleteObjects(t *testing.T) {
+	log.Logger = log.Output(zerolog.TestWriter{T: t})
 	s3Mock := S3APIMock{
 		options: s3.Options{},
 		t:       t,
