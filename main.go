@@ -34,7 +34,6 @@ var (
 	cli struct {
 		Version     bool   `help:"display version information" optional:""`
 		AWSEndpoint string `help:"override AWS endpoint address" short:"e" optional:"" env:"AWS_ENDPOINT"`
-		Region      string `help:"override AWS region" optional:"" default:"us-east-1" env:"AWS_REGION"`
 		Concurrency int    `help:"amount of concurrency used during delete operations" optional:"" default:"100"`
 		Debug       bool   `help:"enable debugging output (warning: this is very verbose)" optional:""`
 	}
@@ -46,7 +45,7 @@ func main() {
 		kong.Description("Quickly destroy all objects and versions in an AWS S3 bucket."))
 
 	if _, regionEnv := os.LookupEnv("AWS_REGION"); !regionEnv {
-		os.Setenv("AWS_REGION", cli.Region)
+		os.Setenv("AWS_REGION", "us-east-1")
 	}
 
 	fmt.Println(assets.Logo)
@@ -77,11 +76,7 @@ func main() {
 
 	// Set up S3 client
 	var s3svc s3.Service
-	if cli.Region == "" {
-		s3svc = s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint), s3.WithRegion(cli.Region))
-	} else {
-		s3svc = s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint))
-	}
+	s3svc = s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint))
 
 	// Get list of buckets
 	loadingSpinner := spinner.New(spinner.CharSets[13], 100*time.Millisecond)
