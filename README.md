@@ -5,7 +5,7 @@
 ![header image](https://github.com/soapiestwaffles/_assets/raw/master/s3-nuke/header.jpg)
 
 # 🪣💣 s3-nuke 💣🪣
-Nuke all the files and all versions from an S3 Bucket rapidly by utilizing both concurrency and bulk API calls to AWS. 
+A CLI utility to nuke all the files and all versions from an S3 Bucket rapidly by utilizing both concurrency and bulk API calls to AWS. 
 
 ### Features
   * By utilizing concurrency and bulk API calls, s3-nuke is fast at what it does!
