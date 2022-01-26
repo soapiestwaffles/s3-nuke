@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/rs/zerolog/log"
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/config"
 )
 
@@ -128,6 +129,7 @@ func WithRegion(region string) ServiceOption {
 }
 
 func (s *service) GetAllBuckets(ctx context.Context) ([]Bucket, error) {
+	log.Debug().Msg("s3: getting list of all buckets")
 	result, err := s.client.ListBuckets(ctx, &s3.ListBucketsInput{})
 	if err != nil {
 		return nil, err
@@ -188,6 +190,7 @@ func (s *service) PutObjectSimple(ctx context.Context, bucketName string, keyNam
 }
 
 func (s *service) GetBucektRegion(ctx context.Context, bucketName string) (string, error) {
+	log.Debug().Str("bucket", bucketName).Msg("s3: looking up bucket region")
 	result, err := s.client.GetBucketLocation(ctx, &s3.GetBucketLocationInput{
 		Bucket: &bucketName,
 	})
@@ -205,6 +208,7 @@ func (s *service) GetBucektRegion(ctx context.Context, bucketName string) (strin
 }
 
 func (s *service) ListObjects(ctx context.Context, bucketName string, continuationToken *string, prefix *string) ([]string, *string, error) {
+	log.Debug().Str("bucket", bucketName).Msg("s3: list objects")
 	result, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
 		Bucket:            &bucketName,
 		ContinuationToken: continuationToken,
@@ -229,6 +233,11 @@ func (s *service) ListObjects(ctx context.Context, bucketName string, continuati
 }
 
 func (s *service) ListObjectVersions(ctx context.Context, bucketName string, keyMarker *string, versionIDMarker *string, prefix *string) ([]ObjectVersion, *string, *string, error) {
+	log.Debug().Str("bucket", bucketName).
+		Interface("keyMarker", keyMarker).
+		Interface("versionIDMarker", versionIDMarker).
+		Interface("prefix", prefix).
+		Msg("s3: list object versions")
 	result, err := s.client.ListObjectVersions(ctx, &s3.ListObjectVersionsInput{
 		Bucket:          &bucketName,
 		KeyMarker:       keyMarker,
@@ -265,6 +274,7 @@ func (s *service) ListObjectVersions(ctx context.Context, bucketName string, key
 }
 
 func (s *service) DeleteObjects(ctx context.Context, bucketName string, objects []ObjectIdentifier) ([]ObjectIdentifier, error) {
+	log.Debug().Str("bucket", bucketName).Interface("objects", objects).Msg("delete objects")
 	deleteObjects := []types.ObjectIdentifier{}
 	for _, object := range objects {
 		deleteObjects = append(deleteObjects, types.ObjectIdentifier{

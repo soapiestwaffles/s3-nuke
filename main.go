@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"sync"
@@ -15,6 +14,8 @@ import (
 	"github.com/briandowns/spinner"
 	"github.com/dustin/go-humanize"
 	"github.com/manifoldco/promptui"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/schollz/progressbar/v3"
 	"github.com/soapiestwaffles/s3-nuke/internal/pkg/assets"
 	"github.com/soapiestwaffles/s3-nuke/internal/pkg/ui/tui"
@@ -31,16 +32,16 @@ var (
 	// builtBy = "unknown"
 
 	cli struct {
-		// Debug       bool   `help:"enable debug mode"`
 		Version     bool   `help:"display version information" optional:""`
 		AWSEndpoint string `help:"override AWS endpoint address" short:"e" optional:"" env:"AWS_ENDPOINT"`
 		Region      string `help:"override AWS region" optional:"" default:"us-east-1" env:"AWS_REGION"`
 		Concurrency int    `help:"amount of concurrency used during delete operations" optional:"" default:"100"`
+		Debug       bool   `help:"enable debugging output" optional:""`
 	}
 )
 
 func main() {
-	ctx := kong.Parse(&cli,
+	kongCtx := kong.Parse(&cli,
 		kong.Name("s3-nuke"),
 		kong.Description("Quickly destroy all objects and versions in an AWS S3 bucket."))
 
@@ -63,6 +64,17 @@ func main() {
 	if cli.AWSEndpoint != "" {
 		fmt.Println("Using AWS endpoint:", cli.AWSEndpoint)
 	}
+
+	ctx := context.Background()
+
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, NoColor: false})
+	if cli.Debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		log.Info().Msg("debug logging output enabled")
+	} else {
+		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	}
+
 	// Set up S3 client
 	var s3svc s3.Service
 	if cli.Region == "" {
@@ -75,10 +87,13 @@ func main() {
 	loadingSpinner := spinner.New(spinner.CharSets[13], 100*time.Millisecond)
 	loadingSpinner.Suffix = " fetching bucket list..."
 	err := loadingSpinner.Color("blue", "bold")
-	ctx.FatalIfErrorf(err)
-	loadingSpinner.Start()
-	buckets, err := s3svc.GetAllBuckets(context.TODO())
-	ctx.FatalIfErrorf(err)
+	kongCtx.FatalIfErrorf(err)
+	if !cli.Debug {
+		loadingSpinner.Start()
+	}
+	log.Debug().Msg("s3: get all buckets")
+	buckets, err := s3svc.GetAllBuckets(ctx)
+	kongCtx.FatalIfErrorf(err)
 	loadingSpinner.Stop()
 
 	// Exit if there are no buckets to nuke
@@ -98,8 +113,11 @@ func main() {
 
 	// autodetect bucket region
 	loadingSpinner.Suffix = " fetching bucket region..."
-	loadingSpinner.Start()
-	bucketRegion, err := s3svc.GetBucektRegion(context.TODO(), selectedBucket)
+	if !cli.Debug {
+		loadingSpinner.Start()
+	}
+	log.Debug().Msg("s3: get bucket region")
+	bucketRegion, err := s3svc.GetBucektRegion(ctx, selectedBucket)
 	loadingSpinner.Stop()
 	if err != nil {
 		fmt.Println("Error detecting bucket region!", err)
@@ -114,14 +132,19 @@ func main() {
 
 	// Fetch bucket metrics
 	loadingSpinner.Suffix = " fetching bucket metrics..."
-	loadingSpinner.Start()
-	objectCountResults, _ := cloudwatchSvc.GetS3ObjectCount(context.TODO(), selectedBucket, 720, 60)
+	if !cli.Debug {
+		loadingSpinner.Start()
+	}
+	log.Debug().Str("bucket", selectedBucket).Msg("fetching cloudwatch bucket metrics")
+	objectCountResults, _ := cloudwatchSvc.GetS3ObjectCount(ctx, selectedBucket, 720, 60)
 	loadingSpinner.Stop()
 
 	if len(objectCountResults.Values) > 0 {
 		fmt.Printf("Bucket object count: %s\n", humanize.Comma(int64(objectCountResults.Values[0])))
 		fmt.Printf("(object count metric last updated %s @ %s)\n", humanize.Time(objectCountResults.Timestamps[0].Local()), objectCountResults.Timestamps[0].Local())
 		fmt.Println("")
+	} else {
+		log.Debug().Str("bucket", selectedBucket).Msg("bucket metrics were not available")
 	}
 
 	// Warning message
@@ -149,7 +172,8 @@ func main() {
 
 	println("")
 
-	err = nuke(s3svc, selectedBucket, cli.Concurrency)
+	log.Debug().Str("bucket", selectedBucket).Int("concurrency", cli.Concurrency).Msg("starting nuke")
+	err = nuke(ctx, s3svc, selectedBucket, cli.Concurrency)
 	if err != nil {
 		fmt.Println("error:", err)
 		os.Exit(1)
@@ -158,7 +182,7 @@ func main() {
 }
 
 // Delete operation w/progress bar
-func nuke(s3svc s3.Service, bucket string, concurrency int) error {
+func nuke(ctx context.Context, s3svc s3.Service, bucket string, concurrency int) error {
 	fmt.Println("")
 
 	c := counter.New()
@@ -172,19 +196,22 @@ func nuke(s3svc s3.Service, bucket string, concurrency int) error {
 
 	s3ListQueue := make(chan string, 100000)
 	s3VersionListQueue := make(chan s3.ObjectVersion, 100000)
-
+	s3ListQueueLogger := log.With().Str("queue", "s3ListQueue").Logger()
+	s3VersionListQueueLogger := log.With().Str("queue", "s3VersionListQueue").Logger()
 	// Get top level objects
 	wg.Add(1)
 	go func() {
 		var continuationToken *string
 		for {
-			objects, token, err := s3svc.ListObjects(context.Background(), bucket, continuationToken, nil)
+			s3ListQueueLogger.Debug().Interface("continuationToken", continuationToken).Msg("s3: list objects")
+			objects, token, err := s3svc.ListObjects(ctx, bucket, continuationToken, nil)
 			if err != nil {
-				fmt.Println("error:", err)
+				s3ListQueueLogger.Fatal().Err(err).Msg("failed to list objects")
 				os.Exit(1)
 			}
 
 			for _, object := range objects {
+				s3ListQueueLogger.Debug().Str("object", object).Msg("add object to queue")
 				s3ListQueue <- object
 			}
 
@@ -209,9 +236,11 @@ func nuke(s3svc s3.Service, bucket string, concurrency int) error {
 
 				// flush
 				if len(deleteQueue) == 1000 {
-					_, err := s3svc.DeleteObjects(context.Background(), bucket, deleteQueue)
+					s3ListQueueLogger.Debug().Msg("1000 flush queue")
+					deleteResult, err := s3svc.DeleteObjects(ctx, bucket, deleteQueue)
+					s3ListQueueLogger.Debug().Int("objectCount", len(deleteResult)).Msg("deleted objects")
 					if err != nil {
-						log.Fatalln("error:", err)
+						s3ListQueueLogger.Fatal().Err(err).Msg("failed to delete objects")
 						os.Exit(1)
 					}
 					_ = bar.Add(1000)
@@ -224,9 +253,11 @@ func nuke(s3svc s3.Service, bucket string, concurrency int) error {
 
 			// final flush
 			if len(deleteQueue) > 0 {
-				_, err := s3svc.DeleteObjects(context.Background(), bucket, deleteQueue)
+				s3ListQueueLogger.Debug().Int("remainingQueueDepth", len(deleteQueue)).Msg("final flush queue")
+				deleteResult, err := s3svc.DeleteObjects(ctx, bucket, deleteQueue)
+				s3ListQueueLogger.Debug().Int("objectCount", len(deleteResult)).Msg("deleted objects")
 				if err != nil {
-					log.Fatalln("error:", err)
+					s3ListQueueLogger.Fatal().Err(err).Msg("failed to delete objects")
 					os.Exit(1)
 				}
 				_ = bar.Add(len(deleteQueue))
@@ -244,13 +275,18 @@ func nuke(s3svc s3.Service, bucket string, concurrency int) error {
 	go func() {
 		var keyMarkerToken, versionMarkerToken *string
 		for {
-			objectVersions, keyMarker, versionMarker, err := s3svc.ListObjectVersions(context.Background(), bucket, keyMarkerToken, versionMarkerToken, nil)
+			s3VersionListQueueLogger.Debug().Str("bucket", bucket).
+				Interface("keyMarkerToken", keyMarkerToken).
+				Interface("versionMarkerToken", versionMarkerToken).
+				Msg("s3: list objects versions")
+			objectVersions, keyMarker, versionMarker, err := s3svc.ListObjectVersions(ctx, bucket, keyMarkerToken, versionMarkerToken, nil)
 			if err != nil {
-				log.Fatalln("error:", err)
+				s3VersionListQueueLogger.Fatal().Err(err).Msg("failed to list object versions")
 				os.Exit(1)
 			}
 
 			for _, version := range objectVersions {
+				s3VersionListQueueLogger.Debug().Str("object", *version.Key).Str("versionID", *version.VersionID).Msg("add object version to queue")
 				s3VersionListQueue <- version
 			}
 
@@ -276,9 +312,11 @@ func nuke(s3svc s3.Service, bucket string, concurrency int) error {
 
 				// flush
 				if len(deleteQueue) == 1000 {
-					_, err := s3svc.DeleteObjects(context.Background(), bucket, deleteQueue)
+					s3VersionListQueueLogger.Debug().Msg("1000 flush queue")
+					deleteResult, err := s3svc.DeleteObjects(ctx, bucket, deleteQueue)
+					s3VersionListQueueLogger.Debug().Int("objectCount", len(deleteResult)).Msg("deleted objects")
 					if err != nil {
-						log.Fatalln("error:", err)
+						s3VersionListQueueLogger.Fatal().Err(err).Msg("failed to delete objects")
 						os.Exit(1)
 					}
 					_ = bar.Add(1000)
@@ -290,9 +328,11 @@ func nuke(s3svc s3.Service, bucket string, concurrency int) error {
 
 			// final flush
 			if len(deleteQueue) > 0 {
-				_, err := s3svc.DeleteObjects(context.Background(), bucket, deleteQueue)
+				s3VersionListQueueLogger.Debug().Int("remainingQueueDepth", len(deleteQueue)).Msg("final flush queue")
+				deleteResult, err := s3svc.DeleteObjects(ctx, bucket, deleteQueue)
+				s3VersionListQueueLogger.Debug().Int("objectCount", len(deleteResult)).Msg("deleted objects")
 				if err != nil {
-					log.Fatalln("error:", err)
+					s3VersionListQueueLogger.Fatal().Err(err).Msg("failed to delete objects")
 					os.Exit(1)
 				}
 				_ = bar.Add(len(deleteQueue))
