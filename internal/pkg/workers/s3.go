@@ -55,9 +55,11 @@ func S3DeleteFromChannel(ctx context.Context, s3svc s3.Service, bucket string, i
 		}
 	}
 
-	err := flush()
-	if err != nil {
-		return deleteCounter, err
+	if objs.Len() > 0 {
+		err := flush()
+		if err != nil {
+			return deleteCounter, err
+		}
 	}
 
 	return deleteCounter, nil

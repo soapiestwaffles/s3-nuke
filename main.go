@@ -18,6 +18,7 @@ import (
 	"github.com/schollz/progressbar/v3"
 	"github.com/soapiestwaffles/s3-nuke/internal/pkg/assets"
 	"github.com/soapiestwaffles/s3-nuke/internal/pkg/ui/tui"
+	"github.com/soapiestwaffles/s3-nuke/internal/pkg/workers"
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/cloudwatch"
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/s3"
 	"golang.org/x/sync/errgroup"
@@ -191,115 +192,33 @@ func nuke(ctx context.Context, s3svc s3.Service, bucket string, concurrency int)
 	s3DeleteQueue := make(chan s3.ObjectIdentifier, 100000)
 
 	g.Go(func() error {
-		var continuationToken *string
-		for {
-			log.Debug().Interface("continuationToken", continuationToken).Msg("s3: list objects")
-			objects, token, err := s3svc.ListObjects(ctx, bucket, continuationToken, nil)
-			if err != nil {
-				log.Fatal().Err(err).Msg("failed to list objects")
-				return err
-			}
+		defer close(s3DeleteQueue)
 
-			for _, object := range objects {
-				log.Debug().Str("object", object).Msg("add object to queue")
-				s3DeleteQueue <- s3.ObjectIdentifier{
-					Key: &object,
-				}
-			}
-
-			if token == nil {
-				break
-			}
-			continuationToken = token
+		c, err := workers.S3QueueObjectVersions(ctx, s3svc, bucket, s3DeleteQueue)
+		if err != nil {
+			return err
 		}
+		log.Debug().Int("totalObjectsAddedToQueue", c).Msg("all objects added to queue")
+
 		return nil
 	})
 
-	// Begin nuke operations: primary objects
 	for i := 0; i < concurrency; i++ {
-		wg.Add(1)
-		go func(input chan string) {
-
-			wg.Done()
-		}(s3ListQueue)
-	}
-
-	wg.Wait()
-
-	// Get object versions
-	wg.Add(1)
-	go func() {
-		var keyMarkerToken, versionMarkerToken *string
-		for {
-			s3VersionListQueueLogger.Debug().Str("bucket", bucket).
-				Interface("keyMarkerToken", keyMarkerToken).
-				Interface("versionMarkerToken", versionMarkerToken).
-				Msg("s3: list objects versions")
-			objectVersions, keyMarker, versionMarker, err := s3svc.ListObjectVersions(ctx, bucket, keyMarkerToken, versionMarkerToken, nil)
+		g.Go(func() error {
+			deleteCount, err := workers.S3DeleteFromChannel(ctx, s3svc, bucket, s3DeleteQueue)
 			if err != nil {
-				s3VersionListQueueLogger.Fatal().Err(err).Msg("failed to list object versions")
-				os.Exit(1)
+				return err
 			}
-
-			for _, version := range objectVersions {
-				s3VersionListQueueLogger.Debug().Str("object", *version.Key).Str("versionID", *version.VersionID).Msg("add object version to queue")
-				s3VersionListQueue <- version
-			}
-
-			if keyMarker == nil && versionMarker == nil {
-				break
-			}
-			keyMarkerToken = keyMarker
-			versionMarkerToken = versionMarker
-		}
-		close(s3VersionListQueue)
-		wg.Done()
-	}()
-
-	for i := 0; i < concurrency; i++ {
-		wg.Add(1)
-		go func(input chan s3.ObjectVersion) {
-			deleteQueue := []s3.ObjectIdentifier{}
-			for key := range input {
-				deleteQueue = append(deleteQueue, s3.ObjectIdentifier{
-					Key:       key.ObjectIdentifier.Key,
-					VersionID: key.ObjectIdentifier.VersionID,
-				})
-
-				// flush
-				if len(deleteQueue) == 1000 {
-					s3VersionListQueueLogger.Debug().Msg("1000 flush queue")
-					deleteResult, err := s3svc.DeleteObjects(ctx, bucket, deleteQueue)
-					s3VersionListQueueLogger.Debug().Int("objectCount", len(deleteResult)).Msg("deleted objects")
-					if err != nil {
-						s3VersionListQueueLogger.Fatal().Err(err).Msg("failed to delete objects")
-						os.Exit(1)
-					}
-					_ = bar.Add(1000)
-					c.Add(1000)
-					// reset
-					deleteQueue = []s3.ObjectIdentifier{}
-				}
-			}
-
-			// final flush
-			if len(deleteQueue) > 0 {
-				s3VersionListQueueLogger.Debug().Int("remainingQueueDepth", len(deleteQueue)).Msg("final flush queue")
-				deleteResult, err := s3svc.DeleteObjects(ctx, bucket, deleteQueue)
-				s3VersionListQueueLogger.Debug().Int("objectCount", len(deleteResult)).Msg("deleted objects")
-				if err != nil {
-					s3VersionListQueueLogger.Fatal().Err(err).Msg("failed to delete objects")
-					os.Exit(1)
-				}
-				_ = bar.Add(len(deleteQueue))
-				c.Add(int64(len(deleteQueue)))
-			}
-
-			wg.Done()
-		}(s3VersionListQueue)
+			log.Debug().Int("objectsDeleted", deleteCount).Msg("deleted objects from queue")
+			c.Add(int64(deleteCount))
+			return nil
+		})
 	}
 
-	wg.Wait()
+	if err := g.Wait(); err != nil {
+		fmt.Println("error:", err)
+		os.Exit(1)
+	}
 
 	fmt.Println("")
 	fmt.Println("")
