@@ -14,6 +14,7 @@ require (
 	github.com/gosuri/uiprogress v0.0.1
 	github.com/guptarohit/asciigraph v0.5.2
 	github.com/schollz/progressbar/v3 v3.8.5
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 )
 
 require (

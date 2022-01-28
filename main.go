@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 
 	"time"
 
@@ -21,6 +20,7 @@ import (
 	"github.com/soapiestwaffles/s3-nuke/internal/pkg/ui/tui"
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/cloudwatch"
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/s3"
+	"golang.org/x/sync/errgroup"
 )
 
 const releaseURL = "https://github.com/soapiestwaffles/s3-nuke/releases"
@@ -187,27 +187,24 @@ func nuke(ctx context.Context, s3svc s3.Service, bucket string, concurrency int)
 		return err
 	}
 
-	var wg sync.WaitGroup
+	g, ctx := errgroup.WithContext(ctx)
+	s3DeleteQueue := make(chan s3.ObjectIdentifier, 100000)
 
-	s3ListQueue := make(chan string, 100000)
-	s3VersionListQueue := make(chan s3.ObjectVersion, 100000)
-	s3ListQueueLogger := log.With().Str("queue", "s3ListQueue").Logger()
-	s3VersionListQueueLogger := log.With().Str("queue", "s3VersionListQueue").Logger()
-	// Get top level objects
-	wg.Add(1)
-	go func() {
+	g.Go(func() error {
 		var continuationToken *string
 		for {
-			s3ListQueueLogger.Debug().Interface("continuationToken", continuationToken).Msg("s3: list objects")
+			log.Debug().Interface("continuationToken", continuationToken).Msg("s3: list objects")
 			objects, token, err := s3svc.ListObjects(ctx, bucket, continuationToken, nil)
 			if err != nil {
-				s3ListQueueLogger.Fatal().Err(err).Msg("failed to list objects")
-				os.Exit(1)
+				log.Fatal().Err(err).Msg("failed to list objects")
+				return err
 			}
 
 			for _, object := range objects {
-				s3ListQueueLogger.Debug().Str("object", object).Msg("add object to queue")
-				s3ListQueue <- object
+				log.Debug().Str("object", object).Msg("add object to queue")
+				s3DeleteQueue <- s3.ObjectIdentifier{
+					Key: &object,
+				}
 			}
 
 			if token == nil {
@@ -215,49 +212,13 @@ func nuke(ctx context.Context, s3svc s3.Service, bucket string, concurrency int)
 			}
 			continuationToken = token
 		}
-		close(s3ListQueue)
-		wg.Done()
-	}()
+		return nil
+	})
 
 	// Begin nuke operations: primary objects
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go func(input chan string) {
-			deleteQueue := []s3.ObjectIdentifier{}
-			for key := range input {
-				deleteQueue = append(deleteQueue, s3.ObjectIdentifier{
-					Key: &key,
-				})
-
-				// flush
-				if len(deleteQueue) == 1000 {
-					s3ListQueueLogger.Debug().Msg("1000 flush queue")
-					deleteResult, err := s3svc.DeleteObjects(ctx, bucket, deleteQueue)
-					s3ListQueueLogger.Debug().Int("objectCount", len(deleteResult)).Msg("deleted objects")
-					if err != nil {
-						s3ListQueueLogger.Fatal().Err(err).Msg("failed to delete objects")
-						os.Exit(1)
-					}
-					_ = bar.Add(1000)
-					c.Add(1000)
-
-					// reset
-					deleteQueue = []s3.ObjectIdentifier{}
-				}
-			}
-
-			// final flush
-			if len(deleteQueue) > 0 {
-				s3ListQueueLogger.Debug().Int("remainingQueueDepth", len(deleteQueue)).Msg("final flush queue")
-				deleteResult, err := s3svc.DeleteObjects(ctx, bucket, deleteQueue)
-				s3ListQueueLogger.Debug().Int("objectCount", len(deleteResult)).Msg("deleted objects")
-				if err != nil {
-					s3ListQueueLogger.Fatal().Err(err).Msg("failed to delete objects")
-					os.Exit(1)
-				}
-				_ = bar.Add(len(deleteQueue))
-				c.Add(int64(len(deleteQueue)))
-			}
 
 			wg.Done()
 		}(s3ListQueue)
