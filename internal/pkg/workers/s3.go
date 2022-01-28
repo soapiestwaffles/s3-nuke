@@ -23,7 +23,7 @@ func (o *ObjectStack) Len() int {
 	return len(o.Queue)
 }
 
-func s3DeleteFromChannel(ctx context.Context, s3svc s3.Service, bucket string, input chan s3.ObjectIdentifier) (int, error) {
+func S3DeleteFromChannel(ctx context.Context, s3svc s3.Service, bucket string, input chan s3.ObjectIdentifier) (int, error) {
 	deleteCounter := 0
 	objs := ObjectStack{}
 
@@ -61,4 +61,28 @@ func s3DeleteFromChannel(ctx context.Context, s3svc s3.Service, bucket string, i
 	}
 
 	return deleteCounter, nil
+}
+
+func S3QueueObjectVersions(ctx context.Context, s3svc s3.Service, bucket string, output chan s3.ObjectIdentifier) (int, error) {
+	var keyMarkerState, versionMarkerState *string
+	queueCounter := 0
+
+	for {
+		objectVersions, keyMarker, versionMarker, err := s3svc.ListObjectVersions(ctx, bucket, keyMarkerState, versionMarkerState, nil)
+		if err != nil {
+			return queueCounter, err
+		}
+		for _, version := range objectVersions {
+			output <- version.ObjectIdentifier
+			queueCounter++
+		}
+
+		if keyMarker == nil && versionMarker == nil {
+			break
+		}
+		keyMarkerState = keyMarker
+		versionMarkerState = versionMarker
+	}
+
+	return queueCounter, nil
 }

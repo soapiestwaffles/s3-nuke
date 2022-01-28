@@ -14,6 +14,7 @@ import (
 var (
 	key     = "test"
 	version = "version"
+	s3svc   = S3ServiceMock{}
 )
 
 func TestObjectStack_Push(t *testing.T) {
@@ -97,7 +98,6 @@ func TestObjectStack_Len(t *testing.T) {
 
 func Test_s3DeleteFromChannel(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
-	s3svc := S3ServiceMock{}
 	tests := []struct {
 		name    string
 		bucket  string
@@ -184,7 +184,7 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 				close(testChannel)
 			}()
 
-			got, err := s3DeleteFromChannel(context.TODO(), s3svc, tt.bucket, testChannel)
+			got, err := S3DeleteFromChannel(context.TODO(), s3svc, tt.bucket, testChannel)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("s3DeleteFromQueue() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -194,6 +194,64 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("s3DeleteFromQueue() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestS3QueueObjectVersions(t *testing.T) {
+	rand.Seed(time.Now().UnixNano())
+
+	type args struct {
+		bucket string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "list object versions",
+			args: args{
+				bucket: "randombucket",
+			},
+			wantErr: false,
+		},
+		{
+			name: "failure on list object versions",
+			args: args{
+				bucket: "failbucket",
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := make(chan s3.ObjectIdentifier, 5000)
+			count, err := S3QueueObjectVersions(context.TODO(), s3svc, tt.args.bucket, output)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("S3QueueObjectVersions() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr {
+				return
+			}
+			t.Logf("S3QueueObjectVersions() got %d objects", count)
+			close(output)
+
+			objCount := 0
+			for range output {
+				objCount++
+			}
+			t.Logf("S3QueueObjectVersions() actual object count: %d", objCount)
+			if objCount != count {
+				t.Errorf("S3QueueObjectVersions() error channel object count and returned count do not match")
+				return
+			}
+
+			if objCount != 4000 {
+				t.Errorf("S3QueueObjectVersions() did not get expected amount of objects")
+				return
 			}
 		})
 	}
@@ -245,5 +303,45 @@ func (s S3ServiceMock) ListObjects(ctx context.Context, bucketName string, conti
 }
 
 func (s S3ServiceMock) ListObjectVersions(ctx context.Context, bucketName string, keyMarker *string, versionIDMarker *string, prefix *string) ([]s3.ObjectVersion, *string, *string, error) {
-	return []s3.ObjectVersion{}, nil, nil, nil
+	if bucketName == "failbucket" {
+		return nil, nil, nil, errors.New("simulated failure")
+	}
+
+	keyMarkerStates := []string{
+		"firstKey",
+		"secondKey",
+		"thirdKey",
+	}
+
+	versionMarkerStates := []string{
+		"firstVersion",
+		"secondVersion",
+		"thirdVersion",
+	}
+
+	o := []s3.ObjectVersion{}
+	for i := 0; i < 1000; i++ {
+		o = append(o, s3.ObjectVersion{
+			ObjectIdentifier: s3.ObjectIdentifier{
+				Key:       &key,
+				VersionID: &version,
+			},
+			IsDeleteMarker: false,
+		})
+	}
+
+	if keyMarker == nil {
+		return o, &keyMarkerStates[0], &versionMarkerStates[0], nil
+	}
+	switch *keyMarker {
+	case keyMarkerStates[0]:
+		return o, &keyMarkerStates[1], &versionMarkerStates[1], nil
+	case keyMarkerStates[1]:
+		return o, &keyMarkerStates[2], &versionMarkerStates[2], nil
+	case keyMarkerStates[2]:
+		return o, nil, nil, nil
+	default:
+		return o, &keyMarkerStates[0], &versionMarkerStates[0], nil
+	}
+
 }
