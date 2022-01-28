@@ -209,7 +209,7 @@ func nuke(ctx context.Context, s3svc s3.Service, bucket string, concurrency int)
 			if err != nil {
 				return err
 			}
-			log.Debug().Int("objectsDeleted", deleteCount).Msg("deleted objects from queue")
+			log.Debug().Int("objectsDeleted", deleteCount).Msg("worker finished")
 			c.Add(int64(deleteCount))
 			return nil
 		})
