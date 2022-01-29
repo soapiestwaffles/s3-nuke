@@ -1,7 +1,5 @@
 [![Lint & Test](https://github.com/soapiestwaffles/s3-nuke/actions/workflows/lint.yml/badge.svg)](https://github.com/soapiestwaffles/s3-nuke/actions/workflows/lint.yml) [![Coverage Status](https://coveralls.io/repos/github/soapiestwaffles/s3-nuke/badge.svg?branch=main)](https://coveralls.io/github/soapiestwaffles/s3-nuke?branch=main) [![Go Report Card](https://goreportcard.com/badge/github.com/soapiestwaffles/s3-nuke)](https://goreportcard.com/report/github.com/soapiestwaffles/s3-nuke)
 
-⚠️S3-nuke is currently in testing and not quite ready for production use⚠️
-
 ![header image](https://github.com/soapiestwaffles/_assets/raw/master/s3-nuke/header.jpg)
 
 # 🪣💣 s3-nuke 💣🪣
