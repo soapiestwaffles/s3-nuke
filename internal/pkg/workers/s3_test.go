@@ -98,77 +98,97 @@ func TestObjectStack_Len(t *testing.T) {
 
 func Test_s3DeleteFromChannel(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
+	progress := make(chan int, 100)
 	tests := []struct {
-		name    string
-		bucket  string
-		want    int
-		wantErr bool
+		name         string
+		bucket       string
+		progressChan chan int
+		want         int
+		wantErr      bool
 	}{
 		{
-			name:    "sub-1000 count",
-			bucket:  "testbucket",
-			want:    500,
-			wantErr: false,
+			name:         "sub-1000 count",
+			bucket:       "testbucket",
+			want:         500,
+			progressChan: nil,
+			wantErr:      false,
 		},
 		{
-			name:    "1000 count",
-			bucket:  "testbucket",
-			want:    1000,
-			wantErr: false,
+			name:         "1000 count",
+			bucket:       "testbucket",
+			want:         1000,
+			progressChan: nil,
+			wantErr:      false,
 		},
 		{
-			name:    "5000 count",
-			bucket:  "testbucket",
-			want:    5000,
-			wantErr: false,
+			name:         "5000 count",
+			bucket:       "testbucket",
+			want:         5000,
+			progressChan: nil,
+			wantErr:      false,
 		},
 		{
-			name:    "random count 1",
-			bucket:  "testbucket",
-			want:    rand.Intn(9000),
-			wantErr: false,
+			name:         "random count 1",
+			bucket:       "testbucket",
+			want:         rand.Intn(9000),
+			progressChan: nil,
+			wantErr:      false,
 		},
 		{
-			name:    "random count 2",
-			bucket:  "testbucket",
-			want:    rand.Intn(9000),
-			wantErr: false,
+			name:         "random count 2",
+			bucket:       "testbucket",
+			want:         rand.Intn(9000),
+			progressChan: nil,
+			wantErr:      false,
 		},
 		{
-			name:    "random count 3",
-			bucket:  "testbucket",
-			want:    rand.Intn(9000),
-			wantErr: false,
+			name:         "random count 3",
+			bucket:       "testbucket",
+			want:         rand.Intn(9000),
+			progressChan: nil,
+			wantErr:      false,
 		},
 		{
-			name:    "random count 4",
-			bucket:  "testbucket",
-			want:    rand.Intn(9000),
-			wantErr: false,
+			name:         "random count 4",
+			bucket:       "testbucket",
+			want:         rand.Intn(9000),
+			progressChan: nil,
+			wantErr:      false,
 		},
 		{
-			name:    "random count 5",
-			bucket:  "testbucket",
-			want:    rand.Intn(9000),
-			wantErr: false,
+			name:         "random count 5",
+			bucket:       "testbucket",
+			want:         rand.Intn(9000),
+			progressChan: nil,
+			wantErr:      false,
 		},
 		{
-			name:    "failure",
-			bucket:  "failbucket",
-			want:    2000,
-			wantErr: true,
+			name:         "failure",
+			bucket:       "failbucket",
+			want:         2000,
+			progressChan: nil,
+			wantErr:      true,
 		},
 		{
-			name:    "wrong count",
-			bucket:  "wrongcount",
-			want:    2000,
-			wantErr: true,
+			name:         "wrong count",
+			bucket:       "wrongcount",
+			want:         2000,
+			progressChan: nil,
+			wantErr:      true,
 		},
 		{
-			name:    "failure on final flush",
-			bucket:  "wrongcountnon1000",
-			want:    4321,
-			wantErr: true,
+			name:         "failure on final flush",
+			bucket:       "wrongcountnon1000",
+			want:         4321,
+			progressChan: nil,
+			wantErr:      true,
+		},
+		{
+			name:         "progress channel",
+			bucket:       "testbucket",
+			want:         1234,
+			progressChan: progress,
+			wantErr:      false,
 		},
 	}
 	for _, tt := range tests {
@@ -184,7 +204,7 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 				close(testChannel)
 			}()
 
-			got, err := S3DeleteFromChannel(context.TODO(), s3svc, tt.bucket, testChannel)
+			got, err := S3DeleteFromChannel(context.TODO(), s3svc, tt.bucket, testChannel, tt.progressChan)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("s3DeleteFromQueue() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -194,6 +214,19 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("s3DeleteFromQueue() = %v, want %v", got, tt.want)
+				return
+			}
+
+			if tt.progressChan != nil {
+				close(tt.progressChan)
+				progressCount := 0
+				for deleted := range tt.progressChan {
+					progressCount += deleted
+				}
+				if progressCount != tt.want {
+					t.Errorf("s3DeleteFromQueue() progressChan want %d, got %d", tt.want, progressCount)
+					return
+				}
 			}
 		})
 	}

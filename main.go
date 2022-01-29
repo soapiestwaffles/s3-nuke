@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"time"
 
@@ -190,6 +191,15 @@ func nuke(ctx context.Context, s3svc s3.Service, bucket string, concurrency int)
 
 	g, ctx := errgroup.WithContext(ctx)
 	s3DeleteQueue := make(chan s3.ObjectIdentifier, 100000)
+	deleteProgress := make(chan int, concurrency*2)
+	var progressWG sync.WaitGroup
+	progressWG.Add(1)
+	go func() {
+		for progressUpdate := range deleteProgress {
+			_ = bar.Add(progressUpdate)
+		}
+		progressWG.Done()
+	}()
 
 	g.Go(func() error {
 		defer close(s3DeleteQueue)
@@ -205,7 +215,7 @@ func nuke(ctx context.Context, s3svc s3.Service, bucket string, concurrency int)
 
 	for i := 0; i < concurrency; i++ {
 		g.Go(func() error {
-			deleteCount, err := workers.S3DeleteFromChannel(ctx, s3svc, bucket, s3DeleteQueue)
+			deleteCount, err := workers.S3DeleteFromChannel(ctx, s3svc, bucket, s3DeleteQueue, deleteProgress)
 			if err != nil {
 				return err
 			}
@@ -219,6 +229,9 @@ func nuke(ctx context.Context, s3svc s3.Service, bucket string, concurrency int)
 		fmt.Println("error:", err)
 		os.Exit(1)
 	}
+
+	close(deleteProgress)
+	progressWG.Wait()
 
 	fmt.Println("")
 	fmt.Println("")

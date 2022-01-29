@@ -23,7 +23,13 @@ func (o *ObjectStack) Len() int {
 	return len(o.Queue)
 }
 
-func S3DeleteFromChannel(ctx context.Context, s3svc s3.Service, bucket string, input chan s3.ObjectIdentifier) (int, error) {
+// S3DeleteFromChannel deletes object versions (s3.ObjectIdentifier) from `input` channel.
+// if `progress` channel is available, it will be sent counts of deleted items
+//
+// returns:
+//   `int` - total number of objects deleted during `input` channel lifetime
+//   `error` - non-nil if errors were encountered
+func S3DeleteFromChannel(ctx context.Context, s3svc s3.Service, bucket string, input chan s3.ObjectIdentifier, progress chan int) (int, error) {
 	deleteCounter := 0
 	objs := ObjectStack{}
 
@@ -38,6 +44,9 @@ func S3DeleteFromChannel(ctx context.Context, s3svc s3.Service, bucket string, i
 			return errors.New("queue count does not match actual deleted count")
 		}
 		deleteCounter += queueCount
+		if progress != nil {
+			progress <- queueCount
+		}
 		objs.Reset()
 
 		return nil
@@ -65,6 +74,11 @@ func S3DeleteFromChannel(ctx context.Context, s3svc s3.Service, bucket string, i
 	return deleteCounter, nil
 }
 
+// S3QueueObjectVersions loads s3 object versions and queues them into the `output` channel
+//
+// returns:
+//   `int` - total number of objects queued
+//   `error` - not-nil if errors were encountered while retrieving object version list
 func S3QueueObjectVersions(ctx context.Context, s3svc s3.Service, bucket string, output chan s3.ObjectIdentifier) (int, error) {
 	var keyMarkerState, versionMarkerState *string
 	queueCounter := 0
