@@ -85,6 +85,10 @@ This tool will return back the current and historical approximate number of obje
 
 #### Installing s3-metrics binary
 
+* using prebuilt binaries:
+
+  See [Releases](https://github.com/soapiestwaffles/s3-nuke/releases)
+
 * using `go`:
   ```
   go install github.com/soapiestwaffles/s3-nuke/tools/s3-metrics@latest
