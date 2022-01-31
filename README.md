@@ -73,7 +73,6 @@ Flags:
   -h, --help                   Show context-sensitive help.
       --version                display version information
   -e, --aws-endpoint=STRING    override AWS endpoint address ($AWS_ENDPOINT)
-      --region="us-east-1"     override AWS region ($AWS_REGION)
       --concurrency=100        amount of concurrency used during delete operations
 ```
 
