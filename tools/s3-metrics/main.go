@@ -64,8 +64,7 @@ func main() {
 	}
 
 	// Set up S3 client
-	var s3svc s3.Service
-	s3svc = s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint))
+	s3svc := s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint))
 
 	// Get list of buckets
 	loadingSpinner := spinner.New(spinner.CharSets[13], 100*time.Millisecond)
