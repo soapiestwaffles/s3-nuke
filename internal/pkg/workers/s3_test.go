@@ -37,7 +37,7 @@ func TestObjectStack_Push(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			o := &ObjectStack{}
+			o := &objectStack{}
 			o.Push(tt.args.object)
 
 			if o.Queue[0].Key != &key || o.Queue[0].VersionID != &version {
@@ -49,7 +49,7 @@ func TestObjectStack_Push(t *testing.T) {
 
 func TestObjectStack_Reset(t *testing.T) {
 	t.Run("reset", func(t *testing.T) {
-		o := &ObjectStack{}
+		o := &objectStack{}
 		o.Push(s3.ObjectIdentifier{
 			Key:       &key,
 			VersionID: &version,
@@ -82,7 +82,7 @@ func TestObjectStack_Len(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			o := &ObjectStack{}
+			o := &objectStack{}
 			for i := 0; i < tt.want; i++ {
 				o.Push(s3.ObjectIdentifier{
 					Key:       &key,

@@ -40,25 +40,34 @@ func TestNewService(t *testing.T) {
 	tests := []struct {
 		name     string
 		s3Client S3API
+		region   string
 	}{
 		{
 			name: "s3 API mock",
 			s3Client: S3APIMock{
 				options: s3.Options{},
 			},
+			region: "us-east-1",
 		},
 		{
 			name:     "aws s3 service",
 			s3Client: s3.NewFromConfig(cfg),
+			region:   "us-east-1",
 		},
 		{
 			name:     "nil test",
 			s3Client: nil,
+			region:   "us-east-1",
+		},
+		{
+			name:     "nil test empty region",
+			s3Client: nil,
+			region:   "",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewService(WithS3API(tt.s3Client))
+			got := NewService(WithS3API(tt.s3Client), WithRegion(tt.region))
 			if got == nil {
 				t.Errorf("NewS3Service() returned nil when it wasn't supposed to")
 			} else {

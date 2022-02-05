@@ -7,19 +7,19 @@ import (
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/s3"
 )
 
-type ObjectStack struct {
+type objectStack struct {
 	Queue []s3.ObjectIdentifier
 }
 
-func (o *ObjectStack) Push(object s3.ObjectIdentifier) {
+func (o *objectStack) Push(object s3.ObjectIdentifier) {
 	o.Queue = append(o.Queue, object)
 }
 
-func (o *ObjectStack) Reset() {
+func (o *objectStack) Reset() {
 	o.Queue = nil
 }
 
-func (o *ObjectStack) Len() int {
+func (o *objectStack) Len() int {
 	return len(o.Queue)
 }
 
@@ -31,7 +31,7 @@ func (o *ObjectStack) Len() int {
 //   `error` - non-nil if errors were encountered
 func S3DeleteFromChannel(ctx context.Context, s3svc s3.Service, bucket string, input chan s3.ObjectIdentifier, progress chan int) (int, error) {
 	deleteCounter := 0
-	objs := ObjectStack{}
+	objs := objectStack{}
 
 	flush := func() error {
 		queueCount := objs.Len()
