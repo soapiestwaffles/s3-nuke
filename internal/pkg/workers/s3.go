@@ -11,14 +11,17 @@ type objectStack struct {
 	Queue []s3.ObjectIdentifier
 }
 
+// Push adds an s3.ObjectIdentifier to the stack
 func (o *objectStack) Push(object s3.ObjectIdentifier) {
 	o.Queue = append(o.Queue, object)
 }
 
+// Reset resets the object stack
 func (o *objectStack) Reset() {
 	o.Queue = nil
 }
 
+// Len returns the current size of the stack
 func (o *objectStack) Len() int {
 	return len(o.Queue)
 }
@@ -29,7 +32,7 @@ func (o *objectStack) Len() int {
 // returns:
 //   `int` - total number of objects deleted during `input` channel lifetime
 //   `error` - non-nil if errors were encountered
-func S3DeleteFromChannel(ctx context.Context, s3svc s3.Service, bucket string, input chan s3.ObjectIdentifier, progress chan int) (int, error) {
+func S3DeleteFromChannel(ctx context.Context, s3svc s3.Service, bucket string, input <-chan s3.ObjectIdentifier, progress chan<- int) (int, error) {
 	deleteCounter := 0
 	objs := objectStack{}
 
@@ -79,7 +82,7 @@ func S3DeleteFromChannel(ctx context.Context, s3svc s3.Service, bucket string, i
 // returns:
 //   `int` - total number of objects queued
 //   `error` - not-nil if errors were encountered while retrieving object version list
-func S3QueueObjectVersions(ctx context.Context, s3svc s3.Service, bucket string, output chan s3.ObjectIdentifier) (int, error) {
+func S3QueueObjectVersions(ctx context.Context, s3svc s3.Service, bucket string, output chan<- s3.ObjectIdentifier) (int, error) {
 	var keyMarkerState, versionMarkerState *string
 	queueCounter := 0
 
