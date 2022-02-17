@@ -3,8 +3,12 @@ package workers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"math/rand"
+	"reflect"
+	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -91,6 +95,102 @@ func TestObjectStack_Len(t *testing.T) {
 			}
 			if got := o.Len(); got != tt.want {
 				t.Errorf("ObjectStack.Len() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_objectStack_FindMissingFrom(t *testing.T) {
+	q := make([]s3.ObjectIdentifier, 1000)
+	z := make([]s3.ObjectIdentifier, 1000)
+	x := make([]s3.ObjectIdentifier, 970)
+	for i := 0; i < 1000; i++ {
+		q[i] = s3.ObjectIdentifier{
+			Key:       ptrString(fmt.Sprintf("key%d", i)),
+			VersionID: ptrString(fmt.Sprintf("version%d", i)),
+		}
+		z[i] = s3.ObjectIdentifier{
+			Key:       ptrString(fmt.Sprintf("key%d", i)),
+			VersionID: ptrString(fmt.Sprintf("version%d", i)),
+		}
+	}
+
+	wasRemoved := make([]s3.ObjectIdentifier, 30)
+	randomIndicies := generateUniqueRandoms(30, 1000)
+	for i := 0; i < 30; i++ {
+		wasRemoved[i] = s3.ObjectIdentifier{
+			Key:       ptrString(fmt.Sprintf("key%d", randomIndicies[i])),
+			VersionID: ptrString(fmt.Sprintf("version%d", randomIndicies[i])),
+		}
+	}
+	sort.Slice(wasRemoved, func(i, j int) bool {
+		iKey, jKey := (*wasRemoved[i].Key)[3:], (*wasRemoved[j].Key)[3:]
+		iVal, _ := strconv.Atoi(iKey)
+		jVal, _ := strconv.Atoi(jKey)
+		return iVal < jVal
+	})
+
+	addIndex := 0
+GENERATEOUTER:
+	for i := 0; i < 1000; i++ {
+		for z := 0; z < 30; z++ {
+			if i == randomIndicies[z] {
+				continue GENERATEOUTER
+			}
+		}
+		x[addIndex] = s3.ObjectIdentifier{
+			Key:       ptrString(fmt.Sprintf("key%d", i)),
+			VersionID: ptrString(fmt.Sprintf("version%d", i)),
+		}
+		addIndex++
+	}
+
+	type args struct {
+		objects []s3.ObjectIdentifier
+	}
+	tests := []struct {
+		name string
+		args args
+		want []s3.ObjectIdentifier
+	}{
+		{
+			name: "all missing",
+			args: args{
+				objects: []s3.ObjectIdentifier{},
+			},
+			want: z,
+		},
+		{
+			name: "none missing",
+			args: args{
+				objects: z,
+			},
+			want: []s3.ObjectIdentifier{},
+		},
+		{
+			name: "random missing",
+			args: args{
+				objects: x,
+			},
+			want: wasRemoved,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := objectStack{
+				Queue: q,
+			}
+			if got := o.FindMissingFrom(tt.args.objects); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("objectStack.FindMissingFrom() = got result (%d), want (%d)", len(got), len(tt.want))
+				t.Errorf("=== GOT ===")
+				for _, v := range got {
+					t.Errorf("--- Key: %s, VersionID: %s\n", *v.Key, *v.VersionID)
+				}
+				t.Errorf("=== WANT ===")
+				for _, v := range tt.want {
+					t.Errorf("--- Key: %s, VersionID: %s\n", *v.Key, *v.VersionID)
+				}
+				return
 			}
 		})
 	}
@@ -377,4 +477,28 @@ func (s S3ServiceMock) ListObjectVersions(ctx context.Context, bucketName string
 		return o, &keyMarkerStates[0], &versionMarkerStates[0], nil
 	}
 
+}
+
+func ptrString(s string) *string {
+	return &s
+}
+
+func generateUniqueRandoms(size int, max int) []int {
+	rand.Seed(time.Now().UnixNano())
+	num := make([]int, size)
+	for i := 0; i < size; i++ {
+	WHILEFOR:
+		for {
+			n := rand.Intn(max)
+			for x := 0; x < len(num); x++ {
+				if num[x] == n {
+					continue WHILEFOR
+				}
+			}
+			num[i] = n
+			break
+		}
+	}
+
+	return num
 }
