@@ -3,6 +3,7 @@ package workers
 import (
 	"context"
 	"errors"
+	"reflect"
 
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/s3"
 )
@@ -24,6 +25,23 @@ func (o *objectStack) Reset() {
 // Len returns the current size of the stack
 func (o *objectStack) Len() int {
 	return len(o.Queue)
+}
+
+// FindMissingFrom will compare the two slices of ObjectIdentifier and return the difference of the two
+func (o *objectStack) FindMissingFrom(objects []s3.ObjectIdentifier) []s3.ObjectIdentifier {
+	result := make([]s3.ObjectIdentifier, 0)
+OUTER:
+	for i := 0; i < len(o.Queue); i++ {
+		for x := 0; x < len(objects); x++ {
+			if reflect.DeepEqual(o.Queue[i], objects[x]) {
+				continue OUTER
+			}
+		}
+
+		result = append(result, o.Queue[i])
+	}
+
+	return result
 }
 
 // S3DeleteFromChannel deletes object versions (s3.ObjectIdentifier) from `input` channel.
