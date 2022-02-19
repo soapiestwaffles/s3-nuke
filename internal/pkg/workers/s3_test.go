@@ -199,10 +199,12 @@ GENERATEOUTER:
 func Test_s3DeleteFromChannel(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
 	progress := make(chan int, 100)
+	failures := make(chan []s3.ObjectIdentifier, 100)
 	tests := []struct {
 		name         string
 		bucket       string
 		progressChan chan int
+		failuresChan chan []s3.ObjectIdentifier
 		want         int
 		wantErr      bool
 	}{
@@ -211,6 +213,7 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 			bucket:       "testbucket",
 			want:         500,
 			progressChan: nil,
+			failuresChan: nil,
 			wantErr:      false,
 		},
 		{
@@ -218,6 +221,7 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 			bucket:       "testbucket",
 			want:         1000,
 			progressChan: nil,
+			failuresChan: nil,
 			wantErr:      false,
 		},
 		{
@@ -225,6 +229,7 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 			bucket:       "testbucket",
 			want:         5000,
 			progressChan: nil,
+			failuresChan: nil,
 			wantErr:      false,
 		},
 		{
@@ -232,6 +237,7 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 			bucket:       "testbucket",
 			want:         rand.Intn(9000),
 			progressChan: nil,
+			failuresChan: nil,
 			wantErr:      false,
 		},
 		{
@@ -239,6 +245,7 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 			bucket:       "testbucket",
 			want:         rand.Intn(9000),
 			progressChan: nil,
+			failuresChan: nil,
 			wantErr:      false,
 		},
 		{
@@ -246,6 +253,7 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 			bucket:       "testbucket",
 			want:         rand.Intn(9000),
 			progressChan: nil,
+			failuresChan: nil,
 			wantErr:      false,
 		},
 		{
@@ -253,6 +261,7 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 			bucket:       "testbucket",
 			want:         rand.Intn(9000),
 			progressChan: nil,
+			failuresChan: nil,
 			wantErr:      false,
 		},
 		{
@@ -260,6 +269,7 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 			bucket:       "testbucket",
 			want:         rand.Intn(9000),
 			progressChan: nil,
+			failuresChan: nil,
 			wantErr:      false,
 		},
 		{
@@ -267,13 +277,7 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 			bucket:       "failbucket",
 			want:         2000,
 			progressChan: nil,
-			wantErr:      true,
-		},
-		{
-			name:         "wrong count",
-			bucket:       "wrongcount",
-			want:         2000,
-			progressChan: nil,
+			failuresChan: nil,
 			wantErr:      true,
 		},
 		{
@@ -281,6 +285,7 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 			bucket:       "wrongcountnon1000",
 			want:         4321,
 			progressChan: nil,
+			failuresChan: nil,
 			wantErr:      true,
 		},
 		{
@@ -288,6 +293,15 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 			bucket:       "testbucket",
 			want:         1234,
 			progressChan: progress,
+			failuresChan: nil,
+			wantErr:      false,
+		},
+		{
+			name:         "failure channel single",
+			bucket:       "failurechanbucket",
+			want:         50,
+			progressChan: nil,
+			failuresChan: failures,
 			wantErr:      false,
 		},
 	}
@@ -297,14 +311,14 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 			go func() {
 				for i := 0; i < tt.want; i++ {
 					testChannel <- s3.ObjectIdentifier{
-						Key:       &key,
-						VersionID: &version,
+						Key:       ptrString(fmt.Sprintf("key%d", i)),
+						VersionID: ptrString(fmt.Sprintf("version%d", i)),
 					}
 				}
 				close(testChannel)
 			}()
 
-			got, err := S3DeleteFromChannel(context.TODO(), s3svc, tt.bucket, testChannel, tt.progressChan)
+			got, err := S3DeleteFromChannel(context.TODO(), s3svc, tt.bucket, testChannel, tt.progressChan, tt.failuresChan)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("s3DeleteFromQueue() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -312,6 +326,35 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 			if tt.wantErr {
 				return
 			}
+
+			if tt.failuresChan != nil && tt.bucket == "failurechanbucket" {
+				if got != (tt.want - 5) {
+					t.Errorf("s3DeleteFromQueue() failed result for failures test, want %d, got %d", tt.want-5, got)
+					return
+				}
+				close(tt.failuresChan)
+				result := []s3.ObjectIdentifier{}
+				for failures := range tt.failuresChan {
+					result = append(result, failures...)
+				}
+
+				if len(result) != 5 {
+					t.Errorf("s3DeleteFromQueue() failuresChan want %d, got %d", 5, len(result))
+					return
+				}
+
+				for i := 0; i < 5; i++ {
+					currentKey := fmt.Sprintf("key%d", i)
+					currentVersion := fmt.Sprintf("version%d", i)
+					if *result[i].Key != currentKey && *result[i].VersionID != currentVersion {
+						t.Errorf("s3DeleteFromQueue() failuresChan found incorrect result in failures chan, want %s/%s, got %s/%s", currentKey, currentVersion, *result[i].Key, *result[i].VersionID)
+						return
+					}
+				}
+
+				return
+			}
+
 			if got != tt.want {
 				t.Errorf("s3DeleteFromQueue() = %v, want %v", got, tt.want)
 				return
@@ -410,6 +453,10 @@ func (s S3ServiceMock) DeleteObjects(ctx context.Context, bucketName string, obj
 			return nil, errors.New("simulated failure")
 		}
 		return objects, nil
+	case "failurechanbucket":
+		result := []s3.ObjectIdentifier{}
+		result = append(result, objects[5:]...)
+		return result, nil
 	}
 
 	return objects, nil

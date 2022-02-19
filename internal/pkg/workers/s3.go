@@ -2,7 +2,6 @@ package workers
 
 import (
 	"context"
-	"errors"
 	"reflect"
 
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/s3"
@@ -49,24 +48,30 @@ OUTER:
 //
 // returns:
 //   `int` - total number of objects deleted during `input` channel lifetime
+//   `[]s3.ObjectIdentifier` - object list of items that were queued but didn't get deleted via s3svc.DeleteObjects
 //   `error` - non-nil if errors were encountered
-func S3DeleteFromChannel(ctx context.Context, s3svc s3.Service, bucket string, input <-chan s3.ObjectIdentifier, progress chan<- int) (int, error) {
+func S3DeleteFromChannel(ctx context.Context, s3svc s3.Service, bucket string, input <-chan s3.ObjectIdentifier, progress chan<- int, failures chan<- []s3.ObjectIdentifier) (int, error) {
 	deleteCounter := 0
 	objs := objectStack{}
 
+	// returns
+	// `[]s3.ObjectIdentifier`` - objects that were queued but didn't actually get deleted
+	// `error`` - error message if an unrecoverable error occured
 	flush := func() error {
 		queueCount := objs.Len()
 		deleteResult, err := s3svc.DeleteObjects(ctx, bucket, objs.Queue)
 		if err != nil {
 			return err
 		}
+		deleteCount := len(deleteResult)
 
-		if len(deleteResult) != queueCount {
-			return errors.New("queue count does not match actual deleted count")
-		}
-		deleteCounter += queueCount
+		deleteCounter += deleteCount
 		if progress != nil {
-			progress <- queueCount
+			progress <- deleteCount
+		}
+		if deleteCount != queueCount && failures != nil {
+			deleteFailures := objs.FindMissingFrom(deleteResult)
+			failures <- deleteFailures
 		}
 		objs.Reset()
 

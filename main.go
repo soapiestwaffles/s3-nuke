@@ -191,11 +191,33 @@ func nuke(ctx context.Context, s3svc s3.Service, bucket string, concurrency int)
 	g, ctx := errgroup.WithContext(ctx)
 	s3DeleteQueue := make(chan s3.ObjectIdentifier, 100000)
 	deleteProgress := make(chan int, concurrency*2)
+	deleteFailures := make(chan []s3.ObjectIdentifier, concurrency)
 	var progressWG sync.WaitGroup
 	progressWG.Add(1)
 	go func() {
 		for progressUpdate := range deleteProgress {
 			_ = bar.Add(progressUpdate)
+		}
+		progressWG.Done()
+	}()
+
+	progressWG.Add(1)
+	go func() {
+		for deleteFailureGroup := range deleteFailures {
+			count := len(deleteFailureGroup)
+			type humanDF struct {
+				key       string
+				versionID string
+			}
+			hdf := make([]humanDF, count)
+			for i := 0; i < count; i++ {
+				hdf[i] = humanDF{
+					key:       *deleteFailureGroup[i].Key,
+					versionID: *deleteFailureGroup[i].VersionID,
+				}
+			}
+
+			log.Warn().Interface("failedItems", hdf).Msg("some key/versions were not able to be deleted")
 		}
 		progressWG.Done()
 	}()
@@ -214,7 +236,7 @@ func nuke(ctx context.Context, s3svc s3.Service, bucket string, concurrency int)
 
 	for i := 0; i < concurrency; i++ {
 		g.Go(func() error {
-			deleteCount, err := workers.S3DeleteFromChannel(ctx, s3svc, bucket, s3DeleteQueue, deleteProgress)
+			deleteCount, err := workers.S3DeleteFromChannel(ctx, s3svc, bucket, s3DeleteQueue, deleteProgress, deleteFailures)
 			if err != nil {
 				return err
 			}
