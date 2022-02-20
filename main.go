@@ -252,6 +252,7 @@ func nuke(ctx context.Context, s3svc s3.Service, bucket string, concurrency int)
 	}
 
 	close(deleteProgress)
+	close(deleteFailures)
 	progressWG.Wait()
 
 	fmt.Println("")
