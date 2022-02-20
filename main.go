@@ -38,6 +38,7 @@ var (
 		AWSEndpoint string `help:"override AWS endpoint address" short:"e" optional:"" env:"AWS_ENDPOINT"`
 		Concurrency int    `help:"amount of concurrency used during delete operations" optional:"" default:"100"`
 		Debug       bool   `help:"enable debugging output (warning: this is very verbose)" optional:""`
+		Warn        bool   `help:"display warning messages" optional:""`
 	}
 )
 
@@ -72,6 +73,8 @@ func main() {
 	if cli.Debug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		log.Info().Msg("debug logging output enabled")
+	} else if cli.Warn {
+		zerolog.SetGlobalLevel(zerolog.WarnLevel)
 	} else {
 		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	}
