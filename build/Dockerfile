@@ -1,5 +1,5 @@
 # BUILD =============================================================================================
-ARG GOLANG_VERSION=1.17.5
+ARG GOLANG_VERSION=1.19
 FROM golang:${GOLANG_VERSION}-alpine as builder
 
 WORKDIR /build
