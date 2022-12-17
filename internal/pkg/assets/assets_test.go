@@ -1,7 +1,7 @@
 package assets
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -19,7 +19,7 @@ func TestInit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			content, err := ioutil.ReadFile(tt.assetFile)
+			content, err := os.ReadFile(tt.assetFile)
 			if err != nil {
 				t.Errorf("Asset file: %s - error reading asset file: %v", tt.assetFile, err)
 			}
