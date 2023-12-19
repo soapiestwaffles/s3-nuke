@@ -42,9 +42,8 @@ require (
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
-	golang.org/x/crypto v0.4.0 // indirect
-	golang.org/x/sys v0.3.0 // indirect
-	golang.org/x/term v0.3.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/term v0.15.0 // indirect
 )
 
 require (
@@ -53,6 +52,5 @@ require (
 	github.com/briandowns/spinner v1.19.0
 	github.com/manifoldco/promptui v0.9.0
 	github.com/nwtgck/go-fakelish v0.1.3
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rs/zerolog v1.28.0
 )
