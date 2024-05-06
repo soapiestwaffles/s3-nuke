@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/rs/zerolog/log"
@@ -212,7 +213,7 @@ func (s *service) ListObjects(ctx context.Context, bucketName string, continuati
 	result, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
 		Bucket:            &bucketName,
 		ContinuationToken: continuationToken,
-		MaxKeys:           1000,
+		MaxKeys:           aws.Int32(1000),
 		Prefix:            prefix,
 	})
 
@@ -225,7 +226,7 @@ func (s *service) ListObjects(ctx context.Context, bucketName string, continuati
 		keys = append(keys, *object.Key)
 	}
 
-	if result.IsTruncated {
+	if aws.ToBool(result.IsTruncated) {
 		return keys, result.NextContinuationToken, nil
 	}
 
@@ -241,7 +242,7 @@ func (s *service) ListObjectVersions(ctx context.Context, bucketName string, key
 	result, err := s.client.ListObjectVersions(ctx, &s3.ListObjectVersionsInput{
 		Bucket:          &bucketName,
 		KeyMarker:       keyMarker,
-		MaxKeys:         1000,
+		MaxKeys:         aws.Int32(1000),
 		Prefix:          prefix,
 		VersionIdMarker: versionIDMarker,
 	})
@@ -287,7 +288,7 @@ func (s *service) DeleteObjects(ctx context.Context, bucketName string, objects 
 		Bucket: &bucketName,
 		Delete: &types.Delete{
 			Objects: deleteObjects,
-			Quiet:   false,
+			Quiet:   aws.Bool(false),
 		},
 	})
 	if err != nil {
