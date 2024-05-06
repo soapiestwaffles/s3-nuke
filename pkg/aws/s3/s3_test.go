@@ -830,7 +830,7 @@ func (s S3APIMock) PutObject(ctx context.Context,
 	}
 
 	return &s3.PutObjectOutput{
-		BucketKeyEnabled: false,
+		BucketKeyEnabled: aws.Bool(false),
 		ETag:             aws.String("123456789ABCDEF"),
 		VersionId:        aws.String("123456789ABCDEF"),
 		ResultMetadata:   middleware.Metadata{},
@@ -916,18 +916,18 @@ func (s S3APIMock) ListObjectsV2(ctx context.Context,
 	if params.ContinuationToken == nil {
 		// first call
 		returnValue.NextContinuationToken = aws.String("first-token")
-		returnValue.IsTruncated = true
+		returnValue.IsTruncated = aws.Bool(true)
 	} else {
 		switch *params.ContinuationToken {
 		case "first-token":
 			returnValue.NextContinuationToken = aws.String("second-token")
-			returnValue.IsTruncated = true
+			returnValue.IsTruncated = aws.Bool(true)
 		case "second-token":
 			returnValue.NextContinuationToken = aws.String("third-token")
-			returnValue.IsTruncated = true
+			returnValue.IsTruncated = aws.Bool(true)
 		default:
 			returnValue.NextContinuationToken = nil
-			returnValue.IsTruncated = false
+			returnValue.IsTruncated = aws.Bool(false)
 		}
 	}
 
@@ -939,11 +939,11 @@ func (s S3APIMock) ListObjectsV2(ctx context.Context,
 			Key:          aws.String(uuid.NewString()),
 			LastModified: &lastModified,
 			Owner:        &types.Owner{},
-			Size:         rand.Int63n(1000000),
+			Size:         aws.Int64(rand.Int63n(1000000)),
 			StorageClass: "StandardStorage",
 		})
 	}
-	returnValue.KeyCount = int32(itemCount)
+	returnValue.KeyCount = aws.Int32(int32(itemCount))
 
 	return &returnValue, nil
 }
@@ -972,9 +972,9 @@ func (s S3APIMock) ListObjectVersions(ctx context.Context,
 	}
 
 	returnValue := s3.ListObjectVersionsOutput{
-		IsTruncated:         false,
+		IsTruncated:         aws.Bool(false),
 		KeyMarker:           params.KeyMarker,
-		MaxKeys:             1000,
+		MaxKeys:             aws.Int32(1000),
 		Name:                params.Bucket,
 		Prefix:              params.Prefix,
 		VersionIdMarker:     params.VersionIdMarker,
@@ -985,18 +985,18 @@ func (s S3APIMock) ListObjectVersions(ctx context.Context,
 	if params.KeyMarker == nil {
 		// first call
 		returnValue.NextKeyMarker = aws.String("first-token")
-		returnValue.IsTruncated = true
+		returnValue.IsTruncated = aws.Bool(true)
 	} else {
 		switch *params.KeyMarker {
 		case "first-token":
 			returnValue.NextKeyMarker = aws.String("second-token")
-			returnValue.IsTruncated = true
+			returnValue.IsTruncated = aws.Bool(true)
 		case "second-token":
 			returnValue.NextKeyMarker = aws.String("third-token")
-			returnValue.IsTruncated = true
+			returnValue.IsTruncated = aws.Bool(true)
 		default:
 			returnValue.NextKeyMarker = nil
-			returnValue.IsTruncated = false
+			returnValue.IsTruncated = aws.Bool(false)
 		}
 	}
 
@@ -1005,11 +1005,11 @@ func (s S3APIMock) ListObjectVersions(ctx context.Context,
 	for i := 0; i < itemCount; i++ {
 		returnValue.Versions = append(returnValue.Versions, types.ObjectVersion{
 			ETag:         aws.String(uuid.NewString()),
-			IsLatest:     false,
+			IsLatest:     aws.Bool(false),
 			Key:          aws.String(uuid.NewString()),
 			LastModified: &lastModified,
 			Owner:        &types.Owner{},
-			Size:         12345,
+			Size:         aws.Int64(12345),
 			StorageClass: "StandardStorage",
 			VersionId:    aws.String(uuid.NewString()),
 		})
@@ -1017,7 +1017,7 @@ func (s S3APIMock) ListObjectVersions(ctx context.Context,
 
 	for i := 0; i < itemCount; i++ {
 		returnValue.DeleteMarkers = append(returnValue.DeleteMarkers, types.DeleteMarkerEntry{
-			IsLatest:     false,
+			IsLatest:     aws.Bool(false),
 			Key:          aws.String(uuid.NewString()),
 			LastModified: &lastModified,
 			Owner:        &types.Owner{},
@@ -1053,7 +1053,7 @@ func (s S3APIMock) DeleteObjects(ctx context.Context,
 
 	for _, object := range params.Delete.Objects {
 		returnValue.Deleted = append(returnValue.Deleted, types.DeletedObject{
-			DeleteMarker:          rand.Uint64()&(1<<63) == 0,
+			DeleteMarker:          aws.Bool(rand.Uint64()&(1<<63) == 0),
 			DeleteMarkerVersionId: aws.String(uuid.NewString()),
 			Key:                   object.Key,
 			VersionId:             object.VersionId,
