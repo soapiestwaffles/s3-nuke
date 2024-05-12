@@ -138,7 +138,7 @@ func main() {
 	objectCountResults, _ := cloudwatchSvc.GetS3ObjectCount(ctx, selectedBucket, 720, 60)
 	loadingSpinner.Stop()
 
-	if len(objectCountResults.Values) > 0 {
+	if objectCountResults != nil && len(objectCountResults.Values) > 0 {
 		fmt.Printf("Bucket object count: %s\n", humanize.Comma(int64(objectCountResults.Values[0])))
 		fmt.Printf("(object count metric last updated %s @ %s)\n", humanize.Time(objectCountResults.Timestamps[0].Local()), objectCountResults.Timestamps[0].Local())
 		fmt.Println("")
