@@ -893,8 +893,6 @@ func (s S3APIMock) ListObjectsV2(ctx context.Context,
 	params *s3.ListObjectsV2Input,
 	optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error) {
 
-	rand.Seed(time.Now().Unix())
-
 	if params.ContinuationToken != nil {
 		s.t.Logf("list objects: bucket [%s] continuationToken [%s]", *params.Bucket, *params.ContinuationToken)
 	} else {
@@ -1040,7 +1038,6 @@ func (s S3APIMockFail) ListObjectVersions(ctx context.Context,
 func (s S3APIMock) DeleteObjects(ctx context.Context,
 	params *s3.DeleteObjectsInput,
 	optFns ...func(*s3.Options)) (*s3.DeleteObjectsOutput, error) {
-	rand.Seed(time.Now().UnixNano())
 
 	s.t.Logf("delete objects bucket [%s], num objects [%d]", *params.Bucket, len(params.Delete.Objects))
 

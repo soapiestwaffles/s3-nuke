@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/soapiestwaffles/s3-nuke/pkg/aws/s3"
 )
@@ -197,7 +196,6 @@ GENERATEOUTER:
 }
 
 func Test_s3DeleteFromChannel(t *testing.T) {
-	rand.Seed(time.Now().UnixNano())
 	progress := make(chan int, 100)
 	failures := make(chan []s3.ObjectIdentifier, 100)
 	tests := []struct {
@@ -376,8 +374,6 @@ func Test_s3DeleteFromChannel(t *testing.T) {
 }
 
 func TestS3QueueObjectVersions(t *testing.T) {
-	rand.Seed(time.Now().UnixNano())
-
 	type args struct {
 		bucket string
 	}
@@ -531,7 +527,6 @@ func ptrString(s string) *string {
 }
 
 func generateUniqueRandoms(size int, max int) []int {
-	rand.Seed(time.Now().UnixNano())
 	num := make([]int, size)
 	for i := 0; i < size; i++ {
 	WHILEFOR:
