@@ -122,12 +122,16 @@ func WithRegion(region string) ServiceOption {
 
 func newClient(region string, awsEndpoint string) *cloudwatch.Client {
 	// Initialize AWS S3 Client
-	cfg, err := config.New(region, awsEndpoint)
+	cfg, err := config.New(region)
 	if err != nil {
 		return nil
 	}
 
-	return cloudwatch.NewFromConfig(cfg)
+	return cloudwatch.NewFromConfig(cfg, func(o *cloudwatch.Options) {
+		if awsEndpoint != "" {
+			o.BaseEndpoint = &awsEndpoint
+		}
+	})
 }
 
 func (s *service) GetS3ObjectCount(ctx context.Context, bucketName string, startTimeDiff int, period int32) (*S3ObjectCountResults, error) {
