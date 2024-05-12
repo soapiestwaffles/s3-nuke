@@ -2,31 +2,38 @@
 
 ![header image](https://github.com/soapiestwaffles/_assets/raw/master/s3-nuke/header.jpg)
 
-# 🪣💣 s3-nuke 💣🪣
+# 🪣💣 s3-nuke
+
 A CLI utility to nuke all the files and all versions from an S3 Bucket rapidly by utilizing both concurrency and bulk API calls to AWS. 
 
+## About
+
 ### Features
-  * By utilizing concurrency and bulk API calls, s3-nuke is fast at what it does!
-  * Auto-detect S3 bucket region -- no need to figure out what region the bucket is in before hand!
-  * Text-based UI makes it easy to select your target bucket!
-  * S3-Nuke includes safety prompts to ensure you _REALLY_ want to nuke everything in a bucket! After all, the operation is not reversible  since you are removing all the object versions as well!
-  * Includes extra tooling to give you a quick look at bucket metrics (`s3-metrics`) or generate test buckets with data (`s3-gen`)
+
+* By utilizing concurrency and bulk API calls, s3-nuke is fast at what it does!
+* Auto-detect S3 bucket region -- no need to figure out what region the bucket is in before hand!
+* Text-based UI makes it easy to select your target bucket!
+* S3-Nuke includes safety prompts to ensure you _REALLY_ want to nuke everything in a bucket! After all, the operation is not reversible  since you are removing all the object versions as well!
+* Includes extra tooling to give you a quick look at bucket metrics (`s3-metrics`) or generate test buckets with data (`s3-gen`)
 
 ![usage demo](https://raw.githubusercontent.com/soapiestwaffles/_assets/master/s3-nuke/s3-nuke.svg)
 
 ### Why?
+
 _...because deleting any bucket with files is just plain annoying._
 
-There have been so many times when I've needed to delete a bucket, but AWS won't let you because the bucket isn't empty. Emptying the bucket isn't a trivial task when it has, for example, been in production for years and has millions of objects inside. Using the AWS console's "Empty Bucket" isn't an option because it's horribly slow and prone to failure. 
+There have been so many times when I've needed to delete a bucket, but AWS won't let you because the bucket isn't empty. Emptying the bucket isn't a trivial task when it has, for example, been in production for years and has millions of objects inside. Using the AWS console's "Empty Bucket" isn't an option because it's horribly slow and prone to failure.
 
 While there are several other scripts and projects that do the same function, I wanted something
 with a little more interactivity. (Also, I was bored 😊)
 
+## Installation/Usage
+
 ### Required AWS policy
 
-S3-Nuke requires S3 access to list {buckets, objects, versions}, delete {objects, versions}. Cloudwatch permissions are optional and used to retrieve extra information about the target bucket. 
+S3-Nuke requires S3 access to list {buckets, objects, versions}, delete {objects, versions}. Cloudwatch permissions are optional and used to retrieve extra information about the target bucket.
 
-```
+```json
   {
     .
     .
@@ -47,24 +54,28 @@ S3-Nuke requires S3 access to list {buckets, objects, versions}, delete {objects
 ```
 
 ### Installing s3-nuke binary
+
 * using prebuilt binaries:
 
   See [Releases](https://github.com/soapiestwaffles/s3-nuke/releases)
 
 * using `go`:
-  ```
+
+  ```shell
   go install github.com/soapiestwaffles/s3-nuke@latest
   ```
 
 ### Running s3-nuke From source
 
-```
+```shell
 go run .
 ```
 
 ### Usage/Available flags
+
 s3-nuke is usually meant to be run without any flags/arguments!
-```
+
+```console
 Usage: s3-nuke
 
 Quickly destroy all objects and versions in an AWS S3 bucket.
@@ -91,18 +102,20 @@ This tool will return back the current and historical approximate number of obje
   See [Releases](https://github.com/soapiestwaffles/s3-nuke/releases)
 
 * using `go`:
-  ```
+
+  ```console
   go install github.com/soapiestwaffles/s3-nuke/tools/s3-metrics@latest
   ```
 
 #### Running s3-metrics from source
-```
+
+```console
 go run tools/s3-metrics/main.go
 ```
 
 #### Usage/Available flags
 
-```
+```console
 s3-metrics tool: get bucket object metrics for a particular bucket
 
 Flags:
@@ -112,6 +125,7 @@ Flags:
 ```
 
 #### Example output
+
 ```console
 $ go run tools/s3-metrics/main.go
 
@@ -161,19 +175,20 @@ This tool was created mainly for testing s3-nuke. This tool will generate `num-b
 #### Installing s3-metrics binary
 
 * using `go`:
-```
+
+```console
 go install github.com/soapiestwaffles/s3-nuke/tools/s3-gen@latest
 ```
 
 #### Running s3-gen from source
 
-```
+```console
 go run tools/s3-gen/main.go --num-buckets=INT --num-objects=INT --num-versions=INT
 ```
 
 #### Usage/Available flags
 
-```
+```console
 s3-nuke tool: generate a set of randomized buckets each containing a set of randomized objects and versions
 
 Flags:
@@ -200,12 +215,11 @@ create objects    16s [===>-----------------------------------------------------
 create versions   16s [========================================>---------------------------]  60%
 ```
 
-
 ## Building
 
 ### Requirements
 
-* go >= 1.19
+* go >= 1.22
 
 ## License
 
