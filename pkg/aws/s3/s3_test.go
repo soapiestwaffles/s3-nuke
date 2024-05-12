@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io"
-
 	"math/rand"
 	"reflect"
 	"strings"
@@ -31,6 +30,66 @@ type S3APIMockFail struct {
 	t       *testing.T
 }
 
+func Test_newS3Client(t *testing.T) {
+	type args struct {
+		region      string
+		awsEndpoint string
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "no endpoint",
+			args: args{
+				region:      "us-west-2",
+				awsEndpoint: "",
+			},
+		},
+		{
+			name: "with endpoint",
+			args: args{
+				region:      "us-east-1",
+				awsEndpoint: "http://test.com:1234",
+			},
+		},
+		{
+			name: "empty region",
+			args: args{
+				region:      "",
+				awsEndpoint: "",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := newS3Client(tt.args.region, tt.args.awsEndpoint)
+			if got == nil {
+				t.Errorf("newS3Client() returned nil when it wasn't supposed to")
+			}
+			if tt.args.region == "" && got.Options().Region != "us-west-2" {
+				t.Errorf("newS3Client() returned client with region set to %s", got.Options().Region)
+			}
+			if got.Options().Region != tt.args.region && tt.args.region != "" {
+				t.Errorf("newS3Client() returned client with region set to %s", got.Options().Region)
+			}
+			if tt.args.awsEndpoint == "" {
+				if got.Options().BaseEndpoint != nil {
+					t.Errorf("newS3Client() returned client with endpoint set to %s", *got.Options().BaseEndpoint)
+				}
+			} else {
+				if got.Options().BaseEndpoint == nil {
+					t.Errorf("newS3Client() returned client with nil endpoint")
+				} else {
+					if *got.Options().BaseEndpoint != tt.args.awsEndpoint {
+						t.Errorf("newS3Client() returned client with endpoint set to %s", *got.Options().BaseEndpoint)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestNewService(t *testing.T) {
 	cfg, err := awsconfig.LoadDefaultConfig(context.TODO())
 	if err != nil {
@@ -38,9 +97,10 @@ func TestNewService(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
-		s3Client S3API
-		region   string
+		name        string
+		s3Client    S3API
+		region      string
+		awsEndpoint string
 	}{
 		{
 			name: "s3 API mock",
@@ -63,6 +123,12 @@ func TestNewService(t *testing.T) {
 			name:     "nil test empty region",
 			s3Client: nil,
 			region:   "",
+		},
+		{
+			name:        "aws s3 with endpoint",
+			s3Client:    s3.NewFromConfig(cfg, func(o *s3.Options) { o.BaseEndpoint = aws.String("http://test.com:1234") }),
+			region:      "us-west-2",
+			awsEndpoint: "http://test.com:1234",
 		},
 	}
 	for _, tt := range tests {

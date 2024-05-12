@@ -308,12 +308,16 @@ func (s *service) DeleteObjects(ctx context.Context, bucketName string, objects 
 
 func newS3Client(region string, awsEndpoint string) *s3.Client {
 	// Initialize AWS S3 Client
-	cfg, err := config.New(region, awsEndpoint)
+	cfg, err := config.New(region)
 	if err != nil {
 		return nil
 	}
 
-	return s3.NewFromConfig(cfg)
+	return s3.NewFromConfig(cfg, func(o *s3.Options) {
+		if awsEndpoint != "" {
+			o.BaseEndpoint = &awsEndpoint
+		}
+	})
 }
 
 // =====
