@@ -67,7 +67,7 @@ func Test_newS3Client(t *testing.T) {
 			if got == nil {
 				t.Errorf("newS3Client() returned nil when it wasn't supposed to")
 			}
-			if tt.args.region == "" && got.Options().Region != "us-west-2" {
+			if tt.args.region == "" && got.Options().Region != "us-east-1" {
 				t.Errorf("newS3Client() returned client with region set to %s", got.Options().Region)
 			}
 			if got.Options().Region != tt.args.region && tt.args.region != "" {

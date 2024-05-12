@@ -307,6 +307,11 @@ func (s *service) DeleteObjects(ctx context.Context, bucketName string, objects 
 }
 
 func newS3Client(region string, awsEndpoint string) *s3.Client {
+	// Default to us-east-1 if no region is provided
+	if region == "" {
+		region = "us-east-1"
+	}
+
 	// Initialize AWS S3 Client
 	cfg, err := config.New(region)
 	if err != nil {
