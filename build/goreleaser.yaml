@@ -38,12 +38,6 @@ archives:
   - id: "s3-nuke"
     builds:
       - "s3-nuke"
-    replacements:
-      # darwin: Darwin
-      # linux: Linux
-      # windows: Windows
-      386: i386
-      # amd64: x86_64
     wrap_in_directory: "true"
     format_overrides:
       - goos: windows
@@ -54,12 +48,6 @@ archives:
     builds:
       - "s3-metrics"
     name_template: "s3-metrics_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    replacements:
-      # darwin: Darwin
-      # linux: Linux
-      # windows: Windows
-      386: i386
-      # amd64: x86_64
     wrap_in_directory: "true"
     format_overrides:
       - goos: windows
