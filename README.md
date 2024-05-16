@@ -84,7 +84,7 @@ Flags:
   -h, --help                   Show context-sensitive help.
       --version                display version information
   -e, --aws-endpoint=STRING    override AWS endpoint address ($AWS_ENDPOINT)
-      --concurrency=100        amount of concurrency used during delete operations
+      --concurrency=5        amount of concurrency used during delete operations
       --debug                  enable debugging output (warning: this is very verbose)
       --warn                   display warning messages
 ```

@@ -36,7 +36,7 @@ var (
 	cli struct {
 		Version     bool   `help:"display version information" optional:""`
 		AWSEndpoint string `help:"override AWS endpoint address" short:"e" optional:"" env:"AWS_ENDPOINT"`
-		Concurrency int    `help:"amount of concurrency used during delete operations" optional:"" default:"100"`
+		Concurrency int    `help:"amount of concurrency used during delete operations" optional:"" default:"5"`
 		Debug       bool   `help:"enable debugging output (warning: this is very verbose)" optional:""`
 		Warn        bool   `help:"display warning messages" optional:""`
 	}
