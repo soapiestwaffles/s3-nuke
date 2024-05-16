@@ -7,6 +7,14 @@ on:
       - master
       - main
   pull_request:
+    branches:
+      - master
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
 permissions:
   contents: read
   # Optional: allow read access to pull request. Use with `only-new-issues` option.
