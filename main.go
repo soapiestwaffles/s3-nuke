@@ -125,8 +125,7 @@ func main() {
 	fmt.Println("🌎 bucket located in", bucketRegion)
 	fmt.Println("")
 
-	// recreate s3svc with bucket's region, create cloudwatch svc
-	s3svc = s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint), s3.WithRegion(bucketRegion))
+	// create cloudwatch svc
 	cloudwatchSvc := cloudwatch.NewService(cloudwatch.WithAWSEndpoint(cli.AWSEndpoint), cloudwatch.WithRegion(bucketRegion))
 
 	// Fetch bucket metrics
@@ -172,7 +171,7 @@ func main() {
 	println("")
 
 	log.Debug().Str("bucket", selectedBucket).Int("concurrency", cli.Concurrency).Msg("starting nuke")
-	err = nuke(ctx, s3svc, selectedBucket, cli.Concurrency)
+	err = nuke(ctx, cli.AWSEndpoint, selectedBucket, bucketRegion, cli.Concurrency)
 	if err != nil {
 		fmt.Println("error:", err)
 		os.Exit(1)
@@ -181,7 +180,7 @@ func main() {
 }
 
 // Delete operation w/progress bar
-func nuke(ctx context.Context, s3svc s3.Service, bucket string, concurrency int) error {
+func nuke(ctx context.Context, awsEndpoint, bucket, bucketRegion string, concurrency int) error {
 	fmt.Println("")
 
 	c := counter.New()
@@ -228,6 +227,9 @@ func nuke(ctx context.Context, s3svc s3.Service, bucket string, concurrency int)
 	g.Go(func() error {
 		defer close(s3DeleteQueue)
 
+		// Create new S3 service for queueing objects.
+		s3svc := s3.NewService(s3.WithAWSEndpoint(awsEndpoint), s3.WithRegion(bucketRegion))
+
 		c, err := workers.S3QueueObjectVersions(ctx, s3svc, bucket, s3DeleteQueue)
 		if err != nil {
 			return err
@@ -239,6 +241,10 @@ func nuke(ctx context.Context, s3svc s3.Service, bucket string, concurrency int)
 
 	for i := 0; i < concurrency; i++ {
 		g.Go(func() error {
+			// Create new S3 service for each worker. This is necessary to avoid a global rate limit bucket
+			// being shared between all service clients.
+			s3svc := s3.NewService(s3.WithAWSEndpoint(awsEndpoint), s3.WithRegion(bucketRegion))
+
 			deleteCount, err := workers.S3DeleteFromChannel(ctx, s3svc, bucket, s3DeleteQueue, deleteProgress, deleteFailures)
 			if err != nil {
 				return err
