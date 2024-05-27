@@ -470,7 +470,7 @@ func (s S3ServiceMock) PutObjectSimple(ctx context.Context, bucketName string, k
 	return nil, nil, nil
 }
 
-func (s S3ServiceMock) GetBucektRegion(ctx context.Context, bucketName string) (string, error) {
+func (s S3ServiceMock) GetBucketRegion(ctx context.Context, bucketName string) (string, error) {
 	return "", nil
 }
 

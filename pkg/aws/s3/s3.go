@@ -30,7 +30,7 @@ type Service interface {
 	PutObjectSimple(ctx context.Context, bucketName string, keyName string, body io.Reader) (*string, *string, error)
 
 	// GetBucketRegion will return the region of a bucket
-	GetBucektRegion(ctx context.Context, bucketName string) (string, error)
+	GetBucketRegion(ctx context.Context, bucketName string) (string, error)
 
 	// ListObjects will return some or all (up to 1,000) of the objects in a bucket with each request.
 	// Objects are returned sorted in an ascending order of the respective key names in the list.
@@ -190,7 +190,7 @@ func (s *service) PutObjectSimple(ctx context.Context, bucketName string, keyNam
 	return result.ETag, result.VersionId, nil
 }
 
-func (s *service) GetBucektRegion(ctx context.Context, bucketName string) (string, error) {
+func (s *service) GetBucketRegion(ctx context.Context, bucketName string) (string, error) {
 	log.Debug().Str("bucket", bucketName).Msg("s3: looking up bucket region")
 	result, err := s.client.GetBucketLocation(ctx, &s3.GetBucketLocationInput{
 		Bucket: &bucketName,

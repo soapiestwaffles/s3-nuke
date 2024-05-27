@@ -91,7 +91,7 @@ func main() {
 	}
 	fmt.Println("")
 
-	bucketRegion, err := s3svc.GetBucektRegion(context.TODO(), selectedBucket)
+	bucketRegion, err := s3svc.GetBucketRegion(context.TODO(), selectedBucket)
 	if err != nil {
 		fmt.Println("Error detecting bucket region!", err)
 		os.Exit(1)
