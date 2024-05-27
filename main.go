@@ -116,7 +116,7 @@ func main() {
 		loadingSpinner.Start()
 	}
 	log.Debug().Msg("s3: get bucket region")
-	bucketRegion, err := s3svc.GetBucektRegion(ctx, selectedBucket)
+	bucketRegion, err := s3svc.GetBucketRegion(ctx, selectedBucket)
 	loadingSpinner.Stop()
 	if err != nil {
 		fmt.Println("Error detecting bucket region!", err)

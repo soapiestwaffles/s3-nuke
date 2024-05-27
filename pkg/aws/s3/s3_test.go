@@ -365,7 +365,7 @@ func Test_s3Service_PutObjectSimple(t *testing.T) {
 	}
 }
 
-func Test_service_GetBucektRegion(t *testing.T) {
+func Test_service_GetBucketRegion(t *testing.T) {
 	log.Logger = log.Output(zerolog.TestWriter{T: t})
 	s3Mock := S3APIMock{
 		options: s3.Options{},
@@ -429,13 +429,13 @@ func Test_service_GetBucektRegion(t *testing.T) {
 				awsEndpoint: tt.fields.awsEndpoint,
 				region:      tt.fields.region,
 			}
-			got, err := s.GetBucektRegion(context.TODO(), tt.bucketName)
+			got, err := s.GetBucketRegion(context.TODO(), tt.bucketName)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("service.GetBucektRegion() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("service.GetBucketRegion() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("service.GetBucektRegion() = %v, want %v", got, tt.want)
+				t.Errorf("service.GetBucketRegion() = %v, want %v", got, tt.want)
 			}
 		})
 	}
