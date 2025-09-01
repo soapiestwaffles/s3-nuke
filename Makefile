@@ -66,7 +66,7 @@ endif
 ## Lint:
 lint-go: ## run golangci-lint on project
 	@$(eval OUTPUT_OPTIONS = $(shell [ "${EXPORT_RESULT}" == "true" ] && echo "--out-format checkstyle ./... | tee /dev/tty > checkstyle-report.xml" || echo "" ))
-	docker run --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:latest-alpine golangci-lint run --deadline=500s $(OUTPUT_OPTIONS)
+	docker run --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:latest-alpine golangci-lint run --timeout=500s $(OUTPUT_OPTIONS)
 
 # lint-yaml: ## lint yaml files in project
 # ifeq ($(EXPORT_RESULT), true)
