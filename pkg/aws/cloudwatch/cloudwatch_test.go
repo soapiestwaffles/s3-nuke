@@ -427,7 +427,6 @@ func TestGetS3ByteCount_Pagination(t *testing.T) {
 type CloudwatchAPIMockWithPagination struct {
 	options cloudwatch.Options
 	t       *testing.T
-	callCount int
 }
 
 func (s CloudwatchAPIMockWithPagination) GetMetricData(ctx context.Context,
@@ -435,7 +434,7 @@ func (s CloudwatchAPIMockWithPagination) GetMetricData(ctx context.Context,
 	optFns ...func(*cloudwatch.Options)) (*cloudwatch.GetMetricDataOutput, error) {
 
 	var nextToken *string
-	values := []float64{10.0}
+	var values []float64
 	
 	// Simulate pagination - first call has NextToken, second doesn't
 	if params.NextToken == nil {
