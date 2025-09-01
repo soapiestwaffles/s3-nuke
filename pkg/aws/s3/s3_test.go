@@ -1135,3 +1135,143 @@ func (s S3APIMockFail) DeleteObjects(ctx context.Context,
 
 	return nil, errors.New("simulated error case")
 }
+
+// Test CreateBucketSimple function
+func Test_service_CreateBucketSimple(t *testing.T) {
+	s3Mock := S3APIMock{
+		options: s3.Options{},
+		t:       t,
+	}
+	s3MockFail := S3APIMockFail{
+		options: s3.Options{},
+		t:       t,
+	}
+
+	type fields struct {
+		client      S3API
+		awsEndpoint string
+		region      string
+	}
+	type args struct {
+		ctx        context.Context
+		bucketName string
+		region     string
+		versioned  bool
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "create bucket simple without versioning",
+			fields: fields{
+				client:      s3Mock,
+				awsEndpoint: "",
+				region:      "us-west-2",
+			},
+			args: args{
+				ctx:        context.TODO(),
+				bucketName: "test-bucket",
+				region:     "us-west-2",
+				versioned:  false,
+			},
+			wantErr: false,
+		},
+		{
+			name: "create bucket simple with versioning",
+			fields: fields{
+				client:      s3Mock,
+				awsEndpoint: "",
+				region:      "us-west-2",
+			},
+			args: args{
+				ctx:        context.TODO(),
+				bucketName: "test-bucket-versioned",
+				region:     "us-west-2",
+				versioned:  true,
+			},
+			wantErr: false,
+		},
+		{
+			name: "create bucket fail",
+			fields: fields{
+				client:      s3MockFail,
+				awsEndpoint: "",
+				region:      "us-west-2",
+			},
+			args: args{
+				ctx:        context.TODO(),
+				bucketName: "test-bucket",
+				region:     "us-west-2",
+				versioned:  false,
+			},
+			wantErr: true,
+		},
+		{
+			name: "create bucket with versioning fail",
+			fields: fields{
+				client:      s3MockFail,
+				awsEndpoint: "",
+				region:      "us-west-2",
+			},
+			args: args{
+				ctx:        context.TODO(),
+				bucketName: "test-bucket",
+				region:     "us-west-2",
+				versioned:  true,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &service{
+				client:      tt.fields.client,
+				awsEndpoint: tt.fields.awsEndpoint,
+				region:      tt.fields.region,
+			}
+			err := s.CreateBucketSimple(tt.args.ctx, tt.args.bucketName, tt.args.region, tt.args.versioned)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("service.CreateBucketSimple() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// Test newS3Client function
+func Test_newS3Client_Coverage(t *testing.T) {
+	tests := []struct {
+		name        string
+		region      string
+		awsEndpoint string
+		wantNil     bool
+	}{
+		{
+			name:        "empty region defaults to us-east-1",
+			region:      "",
+			awsEndpoint: "",
+			wantNil:     false,
+		},
+		{
+			name:        "empty region with endpoint",
+			region:      "",
+			awsEndpoint: "http://localhost:4566",
+			wantNil:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := newS3Client(tt.region, tt.awsEndpoint)
+			if (got == nil) != tt.wantNil {
+				t.Errorf("newS3Client() = %v, wantNil %v", got, tt.wantNil)
+			}
+			if got != nil {
+				t.Logf("newS3Client() created client successfully")
+			}
+		})
+	}
+}
