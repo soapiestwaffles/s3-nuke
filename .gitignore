@@ -20,6 +20,9 @@
 # Binaries
 dist/
 bin/
+s3-nuke
+s3-gen
+s3-metrics
 
 # VSCode Settings
 .vscode/

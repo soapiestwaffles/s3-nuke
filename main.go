@@ -48,7 +48,9 @@ func main() {
 		kong.Description("Quickly destroy all objects and versions in an AWS S3 bucket."))
 
 	if _, regionEnv := os.LookupEnv("AWS_REGION"); !regionEnv {
-		os.Setenv("AWS_REGION", "us-east-1")
+		if err := os.Setenv("AWS_REGION", "us-east-1"); err != nil {
+			log.Warn().Err(err).Msg("Failed to set AWS_REGION environment variable")
+		}
 	}
 
 	fmt.Println(assets.Logo)

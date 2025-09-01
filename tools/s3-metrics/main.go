@@ -48,7 +48,9 @@ func main() {
 	}
 
 	if _, regionEnv := os.LookupEnv("AWS_REGION"); !regionEnv {
-		os.Setenv("AWS_REGION", "us-east-1")
+		if err := os.Setenv("AWS_REGION", "us-east-1"); err != nil {
+			log.Warn().Err(err).Msg("Failed to set AWS_REGION environment variable")
+		}
 	}
 
 	if cli.AWSEndpoint != "" {
