@@ -342,14 +342,20 @@ func TestNewService_Coverage(t *testing.T) {
 	originalRegion := os.Getenv("AWS_REGION")
 	defer func() {
 		if originalRegion != "" {
-			os.Setenv("AWS_REGION", originalRegion)
+			if err := os.Setenv("AWS_REGION", originalRegion); err != nil {
+				t.Errorf("Failed to restore AWS_REGION: %v", err)
+			}
 		} else {
-			os.Unsetenv("AWS_REGION")
+			if err := os.Unsetenv("AWS_REGION"); err != nil {
+				t.Errorf("Failed to unset AWS_REGION: %v", err)
+			}
 		}
 	}()
 
 	t.Run("with env region and no options", func(t *testing.T) {
-		os.Setenv("AWS_REGION", "us-east-1")
+		if err := os.Setenv("AWS_REGION", "us-east-1"); err != nil {
+			t.Fatalf("Failed to set AWS_REGION: %v", err)
+		}
 		svc := NewService()
 		if svc == nil {
 			t.Errorf("NewService() returned nil")
@@ -357,7 +363,9 @@ func TestNewService_Coverage(t *testing.T) {
 	})
 
 	t.Run("with custom region option", func(t *testing.T) {
-		os.Unsetenv("AWS_REGION")
+		if err := os.Unsetenv("AWS_REGION"); err != nil {
+			t.Fatalf("Failed to unset AWS_REGION: %v", err)
+		}
 		svc := NewService(WithRegion("us-west-1"))
 		if svc == nil {
 			t.Errorf("NewService() returned nil")
@@ -365,7 +373,9 @@ func TestNewService_Coverage(t *testing.T) {
 	})
 
 	t.Run("with aws endpoint and region", func(t *testing.T) {
-		os.Unsetenv("AWS_REGION")
+		if err := os.Unsetenv("AWS_REGION"); err != nil {
+			t.Fatalf("Failed to unset AWS_REGION: %v", err)
+		}
 		svc := NewService(WithAWSEndpoint("http://localhost:4566"), WithRegion("us-east-1"))
 		if svc == nil {
 			t.Errorf("NewService() returned nil")
