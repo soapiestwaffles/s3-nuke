@@ -8,7 +8,6 @@ Brief description of what this PR accomplishes. Fixes # (issue)
 - [ ] Other: ___
 
 
-
 * [ ] Is a breaking change?
 
 ## Testing & Security
