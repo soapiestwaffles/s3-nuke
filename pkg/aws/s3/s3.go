@@ -86,6 +86,7 @@ type service struct {
 	client      S3API
 	awsEndpoint string
 	region      string
+	profile     string
 }
 
 // NewService returns an initialized S3Service
@@ -97,9 +98,9 @@ func NewService(opts ...ServiceOption) Service {
 
 	if svc.client == nil {
 		if svc.region == "" {
-			svc.client = newS3Client(os.Getenv("AWS_REGION"), svc.awsEndpoint)
+			svc.client = newS3Client(os.Getenv("AWS_REGION"), svc.awsEndpoint, svc.profile)
 		} else {
-			svc.client = newS3Client(svc.region, svc.awsEndpoint)
+			svc.client = newS3Client(svc.region, svc.awsEndpoint, svc.profile)
 		}
 	}
 
@@ -126,6 +127,13 @@ func WithAWSEndpoint(awsEndpoint string) ServiceOption {
 func WithRegion(region string) ServiceOption {
 	return func(s *service) {
 		s.region = region
+	}
+}
+
+// WithProfile sets the AWS profile to use for authentication
+func WithProfile(profile string) ServiceOption {
+	return func(s *service) {
+		s.profile = profile
 	}
 }
 
@@ -306,14 +314,20 @@ func (s *service) DeleteObjects(ctx context.Context, bucketName string, objects 
 	return returnValue, nil
 }
 
-func newS3Client(region string, awsEndpoint string) *s3.Client {
+func newS3Client(region string, awsEndpoint string, profile string) *s3.Client {
 	// Default to us-east-1 if no region is provided
 	if region == "" {
 		region = "us-east-1"
 	}
 
 	// Initialize AWS S3 Client
-	cfg, err := config.New(region)
+	var cfg aws.Config
+	var err error
+	if profile != "" {
+		cfg, err = config.NewWithProfile(region, profile)
+	} else {
+		cfg, err = config.New(region)
+	}
 	if err != nil {
 		return nil
 	}

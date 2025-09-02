@@ -17,6 +17,7 @@ import (
 var (
 	cli struct {
 		AWSEndpoint  string `help:"override AWS endpoint address" short:"e" optional:"" env:"AWS_ENDPOINT"`
+		Profile      string `help:"AWS profile to use for authentication" optional:"" env:"AWS_PROFILE"`
 		NumBuckets   int    `help:"number of buckets with randomized names to create" short:"n" required:""`
 		NumObjects   int    `help:"number of random objects generated and put into buckets" short:"o" required:""`
 		NumVersions  int    `help:"number of versions to create for each random object" short:"v" required:""`
@@ -54,7 +55,7 @@ func main() {
 	fmt.Println("")
 
 	// Set up S3 client
-	s3 := s3.NewService(s3.WithRegion(cli.Region), s3.WithAWSEndpoint(cli.AWSEndpoint))
+	s3 := s3.NewService(s3.WithRegion(cli.Region), s3.WithAWSEndpoint(cli.AWSEndpoint), s3.WithProfile(cli.Profile))
 
 	// Init progress bar
 	uiprogress.Start()

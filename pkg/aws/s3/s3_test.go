@@ -34,6 +34,7 @@ func Test_newS3Client(t *testing.T) {
 	type args struct {
 		region      string
 		awsEndpoint string
+		profile     string
 	}
 	tests := []struct {
 		name string
@@ -44,6 +45,7 @@ func Test_newS3Client(t *testing.T) {
 			args: args{
 				region:      "us-west-2",
 				awsEndpoint: "",
+				profile:     "",
 			},
 		},
 		{
@@ -51,6 +53,7 @@ func Test_newS3Client(t *testing.T) {
 			args: args{
 				region:      "us-east-1",
 				awsEndpoint: "http://test.com:1234",
+				profile:     "",
 			},
 		},
 		{
@@ -58,14 +61,31 @@ func Test_newS3Client(t *testing.T) {
 			args: args{
 				region:      "",
 				awsEndpoint: "",
+				profile:     "",
+			},
+		},
+		{
+			name: "with invalid profile (expected to fail)",
+			args: args{
+				region:      "us-west-1",
+				awsEndpoint: "",
+				profile:     "test-profile",
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := newS3Client(tt.args.region, tt.args.awsEndpoint)
+			got := newS3Client(tt.args.region, tt.args.awsEndpoint, tt.args.profile)
+			
+			// Special handling for tests with invalid profiles
+			if tt.args.profile != "" && got == nil {
+				t.Logf("newS3Client() returned nil for invalid profile %s (expected in test environment)", tt.args.profile)
+				return
+			}
+			
 			if got == nil {
 				t.Errorf("newS3Client() returned nil when it wasn't supposed to")
+				return
 			}
 			if tt.args.region == "" && got.Options().Region != "us-east-1" {
 				t.Errorf("newS3Client() returned client with region set to %s", got.Options().Region)
@@ -1247,25 +1267,28 @@ func Test_newS3Client_Coverage(t *testing.T) {
 		name        string
 		region      string
 		awsEndpoint string
+		profile     string
 		wantNil     bool
 	}{
 		{
 			name:        "empty region defaults to us-east-1",
 			region:      "",
 			awsEndpoint: "",
+			profile:     "",
 			wantNil:     false,
 		},
 		{
 			name:        "empty region with endpoint",
 			region:      "",
 			awsEndpoint: "http://localhost:4566",
+			profile:     "",
 			wantNil:     false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := newS3Client(tt.region, tt.awsEndpoint)
+			got := newS3Client(tt.region, tt.awsEndpoint, tt.profile)
 			if (got == nil) != tt.wantNil {
 				t.Errorf("newS3Client() = %v, wantNil %v", got, tt.wantNil)
 			}

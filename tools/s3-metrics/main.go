@@ -27,6 +27,7 @@ var (
 	cli struct {
 		Version     bool   `help:"display version information" optional:""`
 		AWSEndpoint string `help:"override AWS endpoint address" short:"e" optional:"" env:"AWS_ENDPOINT"`
+		Profile     string `help:"AWS profile to use for authentication" short:"p" optional:"" env:"AWS_PROFILE"`
 		Debug       bool   `help:"enable debugging output" optional:""`
 	}
 )
@@ -66,7 +67,7 @@ func main() {
 	}
 
 	// Set up S3 client
-	s3svc := s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint))
+	s3svc := s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint), s3.WithProfile(cli.Profile))
 
 	// Get list of buckets
 	loadingSpinner := spinner.New(spinner.CharSets[13], 100*time.Millisecond)
@@ -101,7 +102,7 @@ func main() {
 	fmt.Println("🌎 -> bucket located in", bucketRegion)
 	fmt.Println("")
 
-	cloudwatchSvc := cloudwatch.NewService(cloudwatch.WithAWSEndpoint(cli.AWSEndpoint), cloudwatch.WithRegion(bucketRegion))
+	cloudwatchSvc := cloudwatch.NewService(cloudwatch.WithAWSEndpoint(cli.AWSEndpoint), cloudwatch.WithRegion(bucketRegion), cloudwatch.WithProfile(cli.Profile))
 
 	loadingSpinner.Suffix = " fetching bucket metrics..."
 	loadingSpinner.Start()

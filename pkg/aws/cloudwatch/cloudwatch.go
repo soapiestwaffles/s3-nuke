@@ -77,6 +77,7 @@ type service struct {
 	client      CloudwatchAPI
 	awsEndpoint string
 	region      string
+	profile     string
 }
 
 // NewService returns an initialized Cloudwatch service
@@ -88,9 +89,9 @@ func NewService(opts ...ServiceOption) Service {
 
 	if svc.client == nil {
 		if svc.region == "" {
-			svc.client = newClient(os.Getenv("AWS_REGION"), svc.awsEndpoint)
+			svc.client = newClient(os.Getenv("AWS_REGION"), svc.awsEndpoint, svc.profile)
 		} else {
-			svc.client = newClient(svc.region, svc.awsEndpoint)
+			svc.client = newClient(svc.region, svc.awsEndpoint, svc.profile)
 		}
 	}
 
@@ -120,9 +121,22 @@ func WithRegion(region string) ServiceOption {
 	}
 }
 
-func newClient(region string, awsEndpoint string) *cloudwatch.Client {
+// WithProfile sets the AWS profile to use for authentication
+func WithProfile(profile string) ServiceOption {
+	return func(s *service) {
+		s.profile = profile
+	}
+}
+
+func newClient(region string, awsEndpoint string, profile string) *cloudwatch.Client {
 	// Initialize AWS S3 Client
-	cfg, err := config.New(region)
+	var cfg aws.Config
+	var err error
+	if profile != "" {
+		cfg, err = config.NewWithProfile(region, profile)
+	} else {
+		cfg, err = config.New(region)
+	}
 	if err != nil {
 		return nil
 	}
