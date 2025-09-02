@@ -2,6 +2,7 @@ package s3
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -86,6 +87,8 @@ type service struct {
 	client      S3API
 	awsEndpoint string
 	region      string
+	profile     string
+	initError   error
 }
 
 // NewService returns an initialized S3Service
@@ -96,10 +99,17 @@ func NewService(opts ...ServiceOption) Service {
 	}
 
 	if svc.client == nil {
+		var client S3API
+		var err error
 		if svc.region == "" {
-			svc.client = newS3Client(os.Getenv("AWS_REGION"), svc.awsEndpoint)
+			client, err = newS3Client(os.Getenv("AWS_REGION"), svc.awsEndpoint, svc.profile)
 		} else {
-			svc.client = newS3Client(svc.region, svc.awsEndpoint)
+			client, err = newS3Client(svc.region, svc.awsEndpoint, svc.profile)
+		}
+		if err != nil {
+			svc.initError = err
+		} else {
+			svc.client = client
 		}
 	}
 
@@ -129,7 +139,17 @@ func WithRegion(region string) ServiceOption {
 	}
 }
 
+// WithProfile sets the AWS profile to use for authentication
+func WithProfile(profile string) ServiceOption {
+	return func(s *service) {
+		s.profile = profile
+	}
+}
+
 func (s *service) GetAllBuckets(ctx context.Context) ([]Bucket, error) {
+	if s.initError != nil {
+		return nil, s.initError
+	}
 	log.Debug().Msg("s3: getting list of all buckets")
 	result, err := s.client.ListBuckets(ctx, &s3.ListBucketsInput{})
 	if err != nil {
@@ -150,6 +170,9 @@ func (s *service) GetAllBuckets(ctx context.Context) ([]Bucket, error) {
 }
 
 func (s *service) CreateBucketSimple(ctx context.Context, bucketName string, region string, versioned bool) error {
+	if s.initError != nil {
+		return s.initError
+	}
 	_, err := s.client.CreateBucket(ctx, &s3.CreateBucketInput{
 		Bucket: &bucketName,
 		ACL:    types.BucketCannedACLPrivate,
@@ -177,6 +200,9 @@ func (s *service) CreateBucketSimple(ctx context.Context, bucketName string, reg
 }
 
 func (s *service) PutObjectSimple(ctx context.Context, bucketName string, keyName string, body io.Reader) (*string, *string, error) {
+	if s.initError != nil {
+		return nil, nil, s.initError
+	}
 	result, err := s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: &bucketName,
 		Key:    &keyName,
@@ -191,6 +217,9 @@ func (s *service) PutObjectSimple(ctx context.Context, bucketName string, keyNam
 }
 
 func (s *service) GetBucketRegion(ctx context.Context, bucketName string) (string, error) {
+	if s.initError != nil {
+		return "", s.initError
+	}
 	log.Debug().Str("bucket", bucketName).Msg("s3: looking up bucket region")
 	result, err := s.client.GetBucketLocation(ctx, &s3.GetBucketLocationInput{
 		Bucket: &bucketName,
@@ -209,6 +238,9 @@ func (s *service) GetBucketRegion(ctx context.Context, bucketName string) (strin
 }
 
 func (s *service) ListObjects(ctx context.Context, bucketName string, continuationToken *string, prefix *string) ([]string, *string, error) {
+	if s.initError != nil {
+		return nil, nil, s.initError
+	}
 	log.Debug().Str("bucket", bucketName).Msg("s3: list objects")
 	result, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
 		Bucket:            &bucketName,
@@ -234,6 +266,9 @@ func (s *service) ListObjects(ctx context.Context, bucketName string, continuati
 }
 
 func (s *service) ListObjectVersions(ctx context.Context, bucketName string, keyMarker *string, versionIDMarker *string, prefix *string) ([]ObjectVersion, *string, *string, error) {
+	if s.initError != nil {
+		return nil, nil, nil, s.initError
+	}
 	log.Debug().Str("bucket", bucketName).
 		Interface("keyMarker", keyMarker).
 		Interface("versionIDMarker", versionIDMarker).
@@ -275,6 +310,9 @@ func (s *service) ListObjectVersions(ctx context.Context, bucketName string, key
 }
 
 func (s *service) DeleteObjects(ctx context.Context, bucketName string, objects []ObjectIdentifier) ([]ObjectIdentifier, error) {
+	if s.initError != nil {
+		return nil, s.initError
+	}
 	log.Debug().Str("bucket", bucketName).Interface("objects", objects).Msg("delete objects")
 	deleteObjects := []types.ObjectIdentifier{}
 	for _, object := range objects {
@@ -306,23 +344,29 @@ func (s *service) DeleteObjects(ctx context.Context, bucketName string, objects 
 	return returnValue, nil
 }
 
-func newS3Client(region string, awsEndpoint string) *s3.Client {
+func newS3Client(region string, awsEndpoint string, profile string) (*s3.Client, error) {
 	// Default to us-east-1 if no region is provided
 	if region == "" {
 		region = "us-east-1"
 	}
 
 	// Initialize AWS S3 Client
-	cfg, err := config.New(region)
+	var cfg aws.Config
+	var err error
+	if profile != "" {
+		cfg, err = config.NewWithProfile(region, profile)
+	} else {
+		cfg, err = config.New(region)
+	}
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("failed to initialize AWS config: %w", err)
 	}
 
 	return s3.NewFromConfig(cfg, func(o *s3.Options) {
 		if awsEndpoint != "" {
 			o.BaseEndpoint = &awsEndpoint
 		}
-	})
+	}), nil
 }
 
 // =====

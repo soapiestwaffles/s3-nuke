@@ -16,3 +16,21 @@ func New(region string) (aws.Config, error) {
 
 	return config.LoadDefaultConfig(context.TODO(), config.WithRegion(region), config.WithRetryer(retrier))
 }
+
+// NewWithProfile creates a new aws.Config with custom endpoint resolver, region, and profile set
+func NewWithProfile(region string, profile string) (aws.Config, error) {
+	retrier := func() aws.Retryer {
+		return retry.NewAdaptiveMode()
+	}
+
+	opts := []func(*config.LoadOptions) error{
+		config.WithRegion(region),
+		config.WithRetryer(retrier),
+	}
+
+	if profile != "" {
+		opts = append(opts, config.WithSharedConfigProfile(profile))
+	}
+
+	return config.LoadDefaultConfig(context.TODO(), opts...)
+}

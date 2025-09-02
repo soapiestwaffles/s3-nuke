@@ -14,6 +14,7 @@ func TestCLIStruct(t *testing.T) {
 		// Test that other fields exist and can be accessed
 		_ = cli.Version
 		_ = cli.AWSEndpoint
+		_ = cli.Profile
 		_ = cli.Debug
 		_ = cli.Warn
 		_ = cli.Concurrency

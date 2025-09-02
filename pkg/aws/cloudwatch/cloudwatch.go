@@ -2,6 +2,7 @@ package cloudwatch
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -77,6 +78,8 @@ type service struct {
 	client      CloudwatchAPI
 	awsEndpoint string
 	region      string
+	profile     string
+	initError   error
 }
 
 // NewService returns an initialized Cloudwatch service
@@ -87,10 +90,17 @@ func NewService(opts ...ServiceOption) Service {
 	}
 
 	if svc.client == nil {
+		var client CloudwatchAPI
+		var err error
 		if svc.region == "" {
-			svc.client = newClient(os.Getenv("AWS_REGION"), svc.awsEndpoint)
+			client, err = newClient(os.Getenv("AWS_REGION"), svc.awsEndpoint, svc.profile)
 		} else {
-			svc.client = newClient(svc.region, svc.awsEndpoint)
+			client, err = newClient(svc.region, svc.awsEndpoint, svc.profile)
+		}
+		if err != nil {
+			svc.initError = err
+		} else {
+			svc.client = client
 		}
 	}
 
@@ -120,21 +130,37 @@ func WithRegion(region string) ServiceOption {
 	}
 }
 
-func newClient(region string, awsEndpoint string) *cloudwatch.Client {
+// WithProfile sets the AWS profile to use for authentication
+func WithProfile(profile string) ServiceOption {
+	return func(s *service) {
+		s.profile = profile
+	}
+}
+
+func newClient(region string, awsEndpoint string, profile string) (*cloudwatch.Client, error) {
 	// Initialize AWS S3 Client
-	cfg, err := config.New(region)
+	var cfg aws.Config
+	var err error
+	if profile != "" {
+		cfg, err = config.NewWithProfile(region, profile)
+	} else {
+		cfg, err = config.New(region)
+	}
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("failed to initialize AWS config: %w", err)
 	}
 
 	return cloudwatch.NewFromConfig(cfg, func(o *cloudwatch.Options) {
 		if awsEndpoint != "" {
 			o.BaseEndpoint = &awsEndpoint
 		}
-	})
+	}), nil
 }
 
 func (s *service) GetS3ObjectCount(ctx context.Context, bucketName string, startTimeDiff int, period int32) (*S3ObjectCountResults, error) {
+	if s.initError != nil {
+		return nil, s.initError
+	}
 	returnValues := &S3ObjectCountResults{}
 
 	var nextToken *string
@@ -191,6 +217,9 @@ func (s *service) GetS3ObjectCount(ctx context.Context, bucketName string, start
 }
 
 func (s *service) GetS3ByteCount(ctx context.Context, bucketName string, storageType StorageType, startTimeDiff int, period int32) (*S3ByteCountResults, error) {
+	if s.initError != nil {
+		return nil, s.initError
+	}
 	returnValues := &S3ByteCountResults{}
 
 	var nextToken *string

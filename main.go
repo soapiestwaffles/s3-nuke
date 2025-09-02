@@ -36,6 +36,7 @@ var (
 	cli struct {
 		Version     bool   `help:"display version information" optional:""`
 		AWSEndpoint string `help:"override AWS endpoint address" short:"e" optional:"" env:"AWS_ENDPOINT"`
+		Profile     string `help:"AWS profile to use for authentication" short:"p" optional:"" env:"AWS_PROFILE"`
 		Concurrency int    `help:"amount of concurrency used during delete operations" optional:"" default:"5"`
 		Debug       bool   `help:"enable debugging output (warning: this is very verbose)" optional:""`
 		Warn        bool   `help:"display warning messages" optional:""`
@@ -82,7 +83,7 @@ func main() {
 	}
 
 	// Set up S3 client
-	s3svc := s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint))
+	s3svc := s3.NewService(s3.WithAWSEndpoint(cli.AWSEndpoint), s3.WithProfile(cli.Profile))
 
 	// Get list of buckets
 	loadingSpinner := spinner.New(spinner.CharSets[13], 100*time.Millisecond)
@@ -128,7 +129,7 @@ func main() {
 	fmt.Println("")
 
 	// create cloudwatch svc
-	cloudwatchSvc := cloudwatch.NewService(cloudwatch.WithAWSEndpoint(cli.AWSEndpoint), cloudwatch.WithRegion(bucketRegion))
+	cloudwatchSvc := cloudwatch.NewService(cloudwatch.WithAWSEndpoint(cli.AWSEndpoint), cloudwatch.WithRegion(bucketRegion), cloudwatch.WithProfile(cli.Profile))
 
 	// Fetch bucket metrics
 	loadingSpinner.Suffix = " fetching bucket metrics..."
@@ -173,7 +174,7 @@ func main() {
 	println("")
 
 	log.Debug().Str("bucket", selectedBucket).Int("concurrency", cli.Concurrency).Msg("starting nuke")
-	err = nuke(ctx, cli.AWSEndpoint, selectedBucket, bucketRegion, cli.Concurrency)
+	err = nuke(ctx, cli.AWSEndpoint, cli.Profile, selectedBucket, bucketRegion, cli.Concurrency)
 	if err != nil {
 		fmt.Println("error:", err)
 		os.Exit(1)
@@ -182,7 +183,7 @@ func main() {
 }
 
 // Delete operation w/progress bar
-func nuke(ctx context.Context, awsEndpoint, bucket, bucketRegion string, concurrency int) error {
+func nuke(ctx context.Context, awsEndpoint, profile, bucket, bucketRegion string, concurrency int) error {
 	fmt.Println("")
 
 	c := counter.New()
@@ -230,7 +231,7 @@ func nuke(ctx context.Context, awsEndpoint, bucket, bucketRegion string, concurr
 		defer close(s3DeleteQueue)
 
 		// Create new S3 service for queueing objects.
-		s3svc := s3.NewService(s3.WithAWSEndpoint(awsEndpoint), s3.WithRegion(bucketRegion))
+		s3svc := s3.NewService(s3.WithAWSEndpoint(awsEndpoint), s3.WithRegion(bucketRegion), s3.WithProfile(profile))
 
 		c, err := workers.S3QueueObjectVersions(ctx, s3svc, bucket, s3DeleteQueue)
 		if err != nil {
@@ -245,7 +246,7 @@ func nuke(ctx context.Context, awsEndpoint, bucket, bucketRegion string, concurr
 		g.Go(func() error {
 			// Create new S3 service for each worker. This is necessary to avoid a global rate limit bucket
 			// being shared between all service clients.
-			s3svc := s3.NewService(s3.WithAWSEndpoint(awsEndpoint), s3.WithRegion(bucketRegion))
+			s3svc := s3.NewService(s3.WithAWSEndpoint(awsEndpoint), s3.WithRegion(bucketRegion), s3.WithProfile(profile))
 
 			deleteCount, err := workers.S3DeleteFromChannel(ctx, s3svc, bucket, s3DeleteQueue, deleteProgress, deleteFailures)
 			if err != nil {
