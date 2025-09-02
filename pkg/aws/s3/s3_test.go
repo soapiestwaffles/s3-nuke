@@ -75,11 +75,16 @@ func Test_newS3Client(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := newS3Client(tt.args.region, tt.args.awsEndpoint, tt.args.profile)
+			got, err := newS3Client(tt.args.region, tt.args.awsEndpoint, tt.args.profile)
 			
 			// Special handling for tests with invalid profiles
-			if tt.args.profile != "" && got == nil {
-				t.Logf("newS3Client() returned nil for invalid profile %s (expected in test environment)", tt.args.profile)
+			if tt.args.profile != "" && err != nil {
+				t.Logf("newS3Client() returned error for invalid profile %s: %v (expected in test environment)", tt.args.profile, err)
+				return
+			}
+			
+			if err != nil {
+				t.Errorf("newS3Client() error = %v, wantErr = false", err)
 				return
 			}
 			
@@ -1288,7 +1293,20 @@ func Test_newS3Client_Coverage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := newS3Client(tt.region, tt.awsEndpoint, tt.profile)
+			got, err := newS3Client(tt.region, tt.awsEndpoint, tt.profile)
+			
+			// Check if we expect an error but didn't get one
+			if tt.wantNil && err == nil {
+				t.Errorf("newS3Client() expected error but got none")
+				return
+			}
+			
+			// Check if we didn't expect an error but got one  
+			if !tt.wantNil && err != nil {
+				t.Errorf("newS3Client() error = %v, wantErr = false", err)
+				return
+			}
+			
 			if (got == nil) != tt.wantNil {
 				t.Errorf("newS3Client() = %v, wantNil %v", got, tt.wantNil)
 			}
