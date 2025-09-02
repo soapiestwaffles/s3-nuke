@@ -84,6 +84,7 @@ Flags:
   -h, --help                   Show context-sensitive help.
       --version                display version information
   -e, --aws-endpoint=STRING    override AWS endpoint address ($AWS_ENDPOINT)
+  -p, --profile=STRING         AWS profile to use for authentication ($AWS_PROFILE)
       --concurrency=5        amount of concurrency used during delete operations
       --debug                  enable debugging output (warning: this is very verbose)
       --warn                   display warning messages
@@ -120,8 +121,10 @@ s3-metrics tool: get bucket object metrics for a particular bucket
 
 Flags:
   -h, --help                   Show context-sensitive help.
+      --version                display version information
   -e, --aws-endpoint=STRING    override AWS endpoint address ($AWS_ENDPOINT)
-  -r, --region="us-west-2"     specify region to create bucket and objects in ($AWS_REGION)
+  -p, --profile=STRING         AWS profile to use for authentication ($AWS_PROFILE)
+      --debug                  enable debugging output
 ```
 
 #### Example output
