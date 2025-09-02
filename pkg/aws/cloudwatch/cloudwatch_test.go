@@ -3,6 +3,7 @@ package cloudwatch
 import (
 	"context"
 	"errors"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -333,4 +334,140 @@ func (s CloudwatchAPIMockFail) GetMetricData(ctx context.Context,
 	optFns ...func(*cloudwatch.Options)) (*cloudwatch.GetMetricDataOutput, error) {
 
 	return nil, errors.New("simulated error case")
+}
+
+// Test NewService with different scenarios to improve coverage
+func TestNewService_Coverage(t *testing.T) {
+	// Set AWS_REGION environment variable for testing
+	originalRegion := os.Getenv("AWS_REGION")
+	defer func() {
+		if originalRegion != "" {
+			if err := os.Setenv("AWS_REGION", originalRegion); err != nil {
+				t.Errorf("Failed to restore AWS_REGION: %v", err)
+			}
+		} else {
+			if err := os.Unsetenv("AWS_REGION"); err != nil {
+				t.Errorf("Failed to unset AWS_REGION: %v", err)
+			}
+		}
+	}()
+
+	t.Run("with env region and no options", func(t *testing.T) {
+		if err := os.Setenv("AWS_REGION", "us-east-1"); err != nil {
+			t.Fatalf("Failed to set AWS_REGION: %v", err)
+		}
+		svc := NewService()
+		if svc == nil {
+			t.Errorf("NewService() returned nil")
+		}
+	})
+
+	t.Run("with custom region option", func(t *testing.T) {
+		if err := os.Unsetenv("AWS_REGION"); err != nil {
+			t.Fatalf("Failed to unset AWS_REGION: %v", err)
+		}
+		svc := NewService(WithRegion("us-west-1"))
+		if svc == nil {
+			t.Errorf("NewService() returned nil")
+		}
+	})
+
+	t.Run("with aws endpoint and region", func(t *testing.T) {
+		if err := os.Unsetenv("AWS_REGION"); err != nil {
+			t.Fatalf("Failed to unset AWS_REGION: %v", err)
+		}
+		svc := NewService(WithAWSEndpoint("http://localhost:4566"), WithRegion("us-east-1"))
+		if svc == nil {
+			t.Errorf("NewService() returned nil")
+		}
+	})
+}
+
+// Test pagination in GetS3ObjectCount
+func TestGetS3ObjectCount_Pagination(t *testing.T) {
+	mockWithPagination := CloudwatchAPIMockWithPagination{
+		options: cloudwatch.Options{},
+		t:       t,
+	}
+
+	s := &service{
+		client:      mockWithPagination,
+		awsEndpoint: "",
+		region:      "us-west-2",
+	}
+
+	got, err := s.GetS3ObjectCount(context.TODO(), "testbucket", 72, 86400)
+	if err != nil {
+		t.Errorf("service.GetS3ObjectCount() error = %v", err)
+		return
+	}
+
+	// Should have values from both pages
+	if len(got.Values) < 2 {
+		t.Errorf("service.GetS3ObjectCount() expected pagination results, got %d values", len(got.Values))
+	}
+}
+
+// Test pagination in GetS3ByteCount  
+func TestGetS3ByteCount_Pagination(t *testing.T) {
+	mockWithPagination := CloudwatchAPIMockWithPagination{
+		options: cloudwatch.Options{},
+		t:       t,
+	}
+
+	s := &service{
+		client:      mockWithPagination,
+		awsEndpoint: "",
+		region:      "us-west-2",
+	}
+
+	got, err := s.GetS3ByteCount(context.TODO(), "testbucket", StandardStorage, 72, 86400)
+	if err != nil {
+		t.Errorf("service.GetS3ByteCount() error = %v", err)
+		return
+	}
+
+	// Should have values from both pages
+	if len(got.Values) < 2 {
+		t.Errorf("service.GetS3ByteCount() expected pagination results, got %d values", len(got.Values))
+	}
+}
+
+// Mock that returns paginated results
+type CloudwatchAPIMockWithPagination struct {
+	options cloudwatch.Options
+	t       *testing.T
+}
+
+func (s CloudwatchAPIMockWithPagination) GetMetricData(ctx context.Context,
+	params *cloudwatch.GetMetricDataInput,
+	optFns ...func(*cloudwatch.Options)) (*cloudwatch.GetMetricDataOutput, error) {
+
+	var nextToken *string
+	var values []float64
+	
+	// Simulate pagination - first call has NextToken, second doesn't
+	if params.NextToken == nil {
+		nextToken = aws.String("page2")
+		values = []float64{10.0}
+	} else {
+		nextToken = nil  // No more pages
+		values = []float64{20.0}
+	}
+
+	output := &cloudwatch.GetMetricDataOutput{
+		Messages: []types.MessageData{},
+		MetricDataResults: []types.MetricDataResult{{
+			Id:         aws.String("id"),
+			Label:      aws.String("sample data"),
+			Messages:   []types.MessageData{},
+			StatusCode: "Complete",
+			Timestamps: []time.Time{time.Now()},
+			Values:     values,
+		}},
+		NextToken:      nextToken,
+		ResultMetadata: middleware.Metadata{},
+	}
+
+	return output, nil
 }

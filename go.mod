@@ -1,6 +1,8 @@
 module github.com/soapiestwaffles/s3-nuke
 
-go 1.25
+go 1.23.0
+
+toolchain go1.24.6
 
 require (
 	github.com/Avalanche-io/counter v0.0.0-20180124180526-1336089e985a

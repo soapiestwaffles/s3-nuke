@@ -19,12 +19,12 @@ jobs:
       - name: set up golang
         uses: actions/setup-go@v5
         with:
-          go-version: 1.25
+          go-version: 1.23
       - name: Build golangci-lint from source
         run: |
           git clone https://github.com/golangci/golangci-lint.git /tmp/golangci-lint
           cd /tmp/golangci-lint
-          # Use the Go 1.25 toolchain that was set up by actions/setup-go
+          # Use the Go 1.23 toolchain that was set up by actions/setup-go
           export GOROOT=$(go env GOROOT)
           export PATH=$(go env GOROOT)/bin:$PATH
           go build -o golangci-lint ./cmd/golangci-lint
@@ -39,7 +39,7 @@ jobs:
       - name: set up golang
         uses: actions/setup-go@v5
         with:
-          go-version: 1.25
+          go-version: 1.23
       - name: golangci-test
         run: go test ./... -coverprofile=profile.cov -cover
       - name: send coverage data
