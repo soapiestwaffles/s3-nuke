@@ -1,6 +1,6 @@
 # BUILD =============================================================================================
 ARG GOLANG_VERSION=1.25
-FROM golang:${GOLANG_VERSION}-alpine as builder
+FROM golang:${GOLANG_VERSION}-alpine AS builder
 
 WORKDIR /build
 COPY . .

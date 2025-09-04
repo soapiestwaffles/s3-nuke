@@ -72,6 +72,43 @@ S3-Nuke requires S3 access to list {buckets, objects, versions}, delete {objects
   go install github.com/soapiestwaffles/s3-nuke@latest
   ```
 
+### Using Docker
+
+Docker images are automatically built and published to GitHub Container Registry for each release, supporting both `linux/amd64` and `linux/arm64` platforms.
+
+* Pull the latest Docker image:
+
+  ```shell
+  docker pull ghcr.io/soapiestwaffles/s3-nuke:latest
+  ```
+
+* Run with AWS credentials via environment variables:
+
+  ```shell
+  docker run --rm \
+    -e AWS_ACCESS_KEY_ID=your_access_key \
+    -e AWS_SECRET_ACCESS_KEY=your_secret_key \
+    -e AWS_REGION=your_region \
+    ghcr.io/soapiestwaffles/s3-nuke:latest
+  ```
+
+* Run with AWS credentials file mounted:
+
+  ```shell
+  docker run --rm \
+    -v ~/.aws:/root/.aws:ro \
+    ghcr.io/soapiestwaffles/s3-nuke:latest --profile your_profile
+  ```
+
+* Run with additional flags:
+
+  ```shell
+  docker run --rm \
+    -e AWS_PROFILE=your_profile \
+    -v ~/.aws:/root/.aws:ro \
+    ghcr.io/soapiestwaffles/s3-nuke:latest --concurrency=10 --debug
+  ```
+
 ### Running s3-nuke From source
 
 ```shell
