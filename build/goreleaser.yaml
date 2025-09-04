@@ -1,3 +1,4 @@
+version: 2
 project_name: s3-nuke
 before:
   hooks:
@@ -64,10 +65,20 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+brews:
+  - name: s3-nuke
+    repository:
+      owner: soapiestwaffles
+      name: homebrew-tap
+    homepage: "https://github.com/soapiestwaffles/s3-nuke"
+    description: "Quickly destroy all objects and versions in an AWS S3 bucket"
+    license: "MIT"
+    skip_upload: auto
+
 release:
   ids:
     - "s3-nuke"
     - "s3-metrics"
-  draft: true
+  draft: false
   prerelease: auto
   mode: append
