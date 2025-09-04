@@ -37,16 +37,28 @@ builds:
     #   - -s -w -X main.build={{.Summary}}
 archives:
   - id: "s3-nuke"
+    builds:
+      - "s3-nuke"
+    wrap_in_directory: "true"
+    format_overrides:
+      - goos: windows
+        format: zip
     files:
       - LICENSE
   - id: "s3-metrics"
+    builds:
+      - "s3-metrics"
     name_template: "s3-metrics_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: "true"
+    format_overrides:
+      - goos: windows
+        format: zip
     files:
       - LICENSE
 checksum:
   name_template: '{{ .ProjectName}}_{{ .Version }}_checksums.txt'
 snapshot:
-  version_template: "{{ incpatch .Version }}-next"
+  name_template: "{{ incpatch .Version }}-next"
 changelog:
   sort: asc
   filters:
