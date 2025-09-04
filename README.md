@@ -55,6 +55,13 @@ S3-Nuke requires S3 access to list {buckets, objects, versions}, delete {objects
 
 ### Installing s3-nuke binary
 
+* using Homebrew (macOS):
+
+  ```shell
+  brew tap soapiestwaffles/tap
+  brew install s3-nuke
+  ```
+
 * using prebuilt binaries:
 
   See [Releases](https://github.com/soapiestwaffles/s3-nuke/releases)

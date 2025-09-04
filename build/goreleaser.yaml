@@ -1,3 +1,4 @@
+version: 2
 project_name: s3-nuke
 before:
   hooks:
@@ -36,38 +37,36 @@ builds:
     #   - -s -w -X main.build={{.Summary}}
 archives:
   - id: "s3-nuke"
-    builds:
-      - "s3-nuke"
-    wrap_in_directory: "true"
-    format_overrides:
-      - goos: windows
-        format: zip
     files:
       - LICENSE
   - id: "s3-metrics"
-    builds:
-      - "s3-metrics"
     name_template: "s3-metrics_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    wrap_in_directory: "true"
-    format_overrides:
-      - goos: windows
-        format: zip
     files:
       - LICENSE
 checksum:
   name_template: '{{ .ProjectName}}_{{ .Version }}_checksums.txt'
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next"
 changelog:
   sort: asc
   filters:
     exclude:
       - '^docs:'
       - '^test:'
+brews:
+  - name: s3-nuke
+    repository:
+      owner: soapiestwaffles
+      name: homebrew-tap
+    homepage: "https://github.com/soapiestwaffles/s3-nuke"
+    description: "Quickly destroy all objects and versions in an AWS S3 bucket"
+    license: "MIT"
+    skip_upload: auto
+
 release:
   ids:
     - "s3-nuke"
     - "s3-metrics"
-  draft: true
+  draft: false
   prerelease: auto
   mode: append
