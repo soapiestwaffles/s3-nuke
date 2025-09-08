@@ -14,6 +14,9 @@ builds:
       - linux
       - windows
       - darwin
+    goarch:
+      - amd64
+      - arm64
     ignore:
       - goos: darwin
         goarch: "386"
@@ -28,6 +31,9 @@ builds:
       - linux
       - windows
       - darwin
+    goarch:
+      - amd64
+      - arm64
     ignore:
       - goos: darwin
         goarch: "386"
@@ -67,6 +73,8 @@ changelog:
       - '^test:'
 brews:
   - name: s3-nuke
+    ids:
+      - "s3-nuke"
     repository:
       owner: soapiestwaffles
       name: homebrew-tap
